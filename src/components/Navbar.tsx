@@ -26,8 +26,10 @@ export function Navbar() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link to="/" className="flex flex-col items-start">Chitraboli
-চিত্রাবলী✨<span className="font-display text-2xl font-semibold text-gold tracking-wide">
+          <Link to="/" className="flex flex-col items-start">
+
+Chitraboli
+চিত্রাবলী ✨<span className="font-display text-2xl font-semibold text-gold tracking-wide">
               Chitraboli
             </span>
             <span className="font-display text-sm text-gold-light opacity-80">চিত্রাবলী ✨</span>
