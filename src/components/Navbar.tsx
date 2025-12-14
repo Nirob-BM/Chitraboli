@@ -30,7 +30,7 @@ export function Navbar() {
             <span className="font-display text-2xl font-semibold text-gold tracking-wide">
               Chitraboli
             </span>
-            <span className="font-display text-sm text-gold-light opacity-80">চিত্রাবলী ✨</span>
+            <span className="font-display text-sm text-gold-light opacity-80 text-justify">চিত্রাবলী ✨</span>
           </Link>
 
           {/* Desktop Navigation */}
