@@ -5,27 +5,22 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles, Heart, Award } from "lucide-react";
 import { getFeaturedProducts } from "@/data/products";
 import heroImage from "@/assets/hero-jewelry.jpg";
-
 const Index = () => {
   const featuredProducts = getFeaturedProducts();
-
-  return (
-    <Layout>
+  return <Layout>
       {/* Hero Section */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden gradient-hero">
         {/* Background Image */}
         <div className="absolute inset-0">
-          <img
-            src={heroImage}
-            alt="Handmade jewelry"
-            className="w-full h-full object-cover opacity-40"
-          />
+          <img src={heroImage} alt="Handmade jewelry" className="w-full h-full object-cover opacity-40" />
           <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background" />
         </div>
 
         {/* Decorative Elements */}
         <div className="absolute top-1/4 left-10 w-32 h-32 rounded-full bg-primary/10 blur-3xl animate-float" />
-        <div className="absolute bottom-1/4 right-10 w-40 h-40 rounded-full bg-secondary/20 blur-3xl animate-float" style={{ animationDelay: "2s" }} />
+        <div className="absolute bottom-1/4 right-10 w-40 h-40 rounded-full bg-secondary/20 blur-3xl animate-float" style={{
+        animationDelay: "2s"
+      }} />
 
         {/* Content */}
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
@@ -33,14 +28,20 @@ const Index = () => {
             Handmade with{" "}
             <span className="text-gold font-medium">Love</span>
           </h1>
-          <p className="font-display text-xl md:text-2xl text-muted-foreground mb-8 animate-fade-up" style={{ animationDelay: "0.2s" }}>
+          <p className="font-display text-xl md:text-2xl text-muted-foreground mb-8 animate-fade-up" style={{
+          animationDelay: "0.2s"
+        }}>
             Crafted with Passion
           </p>
-          <p className="font-body text-muted-foreground max-w-xl mx-auto mb-12 animate-fade-up" style={{ animationDelay: "0.4s" }}>
+          <p className="font-body text-muted-foreground max-w-xl mx-auto mb-12 animate-fade-up" style={{
+          animationDelay: "0.4s"
+        }}>
             Every piece of Chitraboli jewellery is inspired by art, tradition, and passion. 
             Discover unique handcrafted pieces that make you shine.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up" style={{ animationDelay: "0.6s" }}>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up" style={{
+          animationDelay: "0.6s"
+        }}>
             <Button variant="hero-solid" size="xl" asChild>
               <Link to="/shop">
                 Explore Jewellery
@@ -67,27 +68,19 @@ const Index = () => {
       <section className="py-20 bg-card">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Sparkles,
-                title: "Handcrafted",
-                description: "Every piece is carefully handmade by skilled artisans",
-              },
-              {
-                icon: Heart,
-                title: "Made with Love",
-                description: "We pour passion and care into every creation",
-              },
-              {
-                icon: Award,
-                title: "Premium Quality",
-                description: "Only the finest materials for lasting beauty",
-              },
-            ].map((feature, index) => (
-              <div
-                key={feature.title}
-                className="text-center p-8 rounded-lg bg-background/50 border border-border/50 hover:border-primary/30 transition-all duration-500 hover:shadow-gold group"
-              >
+            {[{
+            icon: Sparkles,
+            title: "Handcrafted",
+            description: "Every piece is carefully handmade by skilled artisans"
+          }, {
+            icon: Heart,
+            title: "Made with Love",
+            description: "We pour passion and care into every creation"
+          }, {
+            icon: Award,
+            title: "Premium Quality",
+            description: "Only the finest materials for lasting beauty"
+          }].map((feature, index) => <div key={feature.title} className="text-center p-8 rounded-lg bg-background/50 border border-border/50 hover:border-primary/30 transition-all duration-500 hover:shadow-gold group">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-6 group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-500">
                   <feature.icon className="h-8 w-8" />
                 </div>
@@ -97,8 +90,7 @@ const Index = () => {
                 <p className="text-muted-foreground text-sm">
                   {feature.description}
                 </p>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
       </section>
@@ -116,9 +108,7 @@ const Index = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} {...product} />
-            ))}
+            {featuredProducts.map(product => <ProductCard key={product.id} {...product} />)}
           </div>
 
           <div className="text-center mt-12">
@@ -139,14 +129,8 @@ const Index = () => {
             <h2 className="font-display text-4xl md:text-5xl font-light text-foreground mb-6">
               About <span className="text-gold">Chitraboli</span>
             </h2>
-            <p className="font-display text-xl text-muted-foreground mb-4">
-              চিত্রাবলী
-            </p>
-            <p className="text-muted-foreground leading-relaxed mb-8">
-              Chitraboli – চিত্রাবলী creates handmade jewellery inspired by art, tradition and passion. 
-              Every piece is crafted with love to make you shine. We believe that jewellery is not just an accessory, 
-              but a reflection of your unique personality and style.
-            </p>
+            <p className="font-display text-xl text-muted-foreground mb-4">চিত্রাবলী ✨</p>
+            <p className="text-muted-foreground leading-relaxed mb-8">Chitraboli – চিত্রাবলী creates handmade jewellery inspired by art, tradition and passion. Every piece is crafted with love to make you shine. We believe that jewellery is not just an accessory, but a reflection of your unique personality and style.</p>
             <Button variant="gold" size="lg" asChild>
               <Link to="/about">
                 Learn More About Us
@@ -171,11 +155,7 @@ const Index = () => {
             <p className="text-muted-foreground mb-8">
               Follow us on social media for the latest collections, special offers, and behind-the-scenes content.
             </p>
-            <a
-              href="https://www.facebook.com/chitraboli1"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a href="https://www.facebook.com/chitraboli1" target="_blank" rel="noopener noreferrer">
               <Button variant="gold" size="lg">
                 Follow on Facebook
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -184,8 +164,6 @@ const Index = () => {
           </div>
         </div>
       </section>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default Index;
