@@ -14,7 +14,117 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      cart_items: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          product_image: string | null
+          product_name: string
+          product_price: number
+          quantity: number
+          session_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          product_image?: string | null
+          product_name: string
+          product_price: number
+          quantity?: number
+          session_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          product_image?: string | null
+          product_name?: string
+          product_price?: number
+          quantity?: number
+          session_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          created_at: string
+          customer_address: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          items: Json
+          session_id: string | null
+          status: string
+          total_amount: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_address: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          id?: string
+          items: Json
+          session_id?: string | null
+          status?: string
+          total_amount: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_address?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          id?: string
+          items?: Json
+          session_id?: string | null
+          status?: string
+          total_amount?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          created_at: string
+          id: string
+          images: string[] | null
+          product_id: string | null
+          rating: number
+          review_text: string
+          reviewer_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          images?: string[] | null
+          product_id?: string | null
+          rating: number
+          review_text: string
+          reviewer_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          images?: string[] | null
+          product_id?: string | null
+          rating?: number
+          review_text?: string
+          reviewer_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

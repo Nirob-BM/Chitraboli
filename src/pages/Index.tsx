@@ -1,13 +1,16 @@
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/ProductCard";
+import { ReviewsSection } from "@/components/ReviewsSection";
 import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles, Heart, Award } from "lucide-react";
 import { getFeaturedProducts } from "@/data/products";
 import heroImage from "@/assets/hero-jewelry.jpg";
+
 const Index = () => {
   const featuredProducts = getFeaturedProducts();
-  return <Layout>
+  return (
+    <Layout>
       {/* Hero Section */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden gradient-hero">
         {/* Background Image */}
@@ -141,6 +144,9 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Reviews Section */}
+      <ReviewsSection />
+
       {/* CTA Section */}
       <section className="py-24 gradient-hero relative overflow-hidden">
         <div className="absolute inset-0 opacity-20">
@@ -164,6 +170,8 @@ const Index = () => {
           </div>
         </div>
       </section>
-    </Layout>;
+    </Layout>
+  );
 };
+
 export default Index;

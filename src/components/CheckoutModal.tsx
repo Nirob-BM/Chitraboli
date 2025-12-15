@@ -1,0 +1,171 @@
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useCart } from "@/contexts/CartContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { CheckCircle, Loader2 } from "lucide-react";
+
+interface CheckoutModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
+  const { items, totalPrice, clearCart } = useCart();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [orderPlaced, setOrderPlaced] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const sessionId = localStorage.getItem("chitraboli-session") || "";
+      
+      const { error } = await supabase.from("orders").insert([{
+        session_id: sessionId,
+        customer_name: formData.name,
+        customer_email: formData.email,
+        customer_phone: formData.phone,
+        customer_address: formData.address,
+        items: items as unknown as any,
+        total_amount: totalPrice,
+        status: "pending",
+      }]);
+
+      if (error) throw error;
+
+      setOrderPlaced(true);
+      clearCart();
+      
+      toast({
+        title: "Order Placed Successfully!",
+        description: "We'll contact you shortly to confirm your order.",
+      });
+
+      setTimeout(() => {
+        onOpenChange(false);
+        setOrderPlaced(false);
+        setFormData({ name: "", email: "", phone: "", address: "" });
+      }, 3000);
+    } catch (error) {
+      console.error("Order error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to place order. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (orderPlaced) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="bg-card border-gold/20 max-w-md">
+          <div className="flex flex-col items-center justify-center py-8">
+            <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mb-4 animate-scale-in">
+              <CheckCircle className="w-12 h-12 text-green-500" />
+            </div>
+            <h2 className="font-display text-2xl text-foreground mb-2">Order Confirmed!</h2>
+            <p className="text-muted-foreground text-center">
+              Thank you for your order. We'll reach out to you soon.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-card border-gold/20 max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl text-foreground">Checkout</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">Full Name *</label>
+            <Input
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="bg-background border-gold/20 focus:border-gold"
+              placeholder="Enter your full name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">Email *</label>
+            <Input
+              required
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="bg-background border-gold/20 focus:border-gold"
+              placeholder="Enter your email"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">Phone Number *</label>
+            <Input
+              required
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              className="bg-background border-gold/20 focus:border-gold"
+              placeholder="Enter your phone number"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">Delivery Address *</label>
+            <Textarea
+              required
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              className="bg-background border-gold/20 focus:border-gold min-h-[100px]"
+              placeholder="Enter your full delivery address"
+            />
+          </div>
+
+          <div className="border-t border-gold/20 pt-4">
+            <div className="flex justify-between mb-4">
+              <span className="text-muted-foreground">Total Amount:</span>
+              <span className="font-display text-gold text-xl">৳{totalPrice.toLocaleString()}</span>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4">
+              * Payment will be collected on delivery (Cash on Delivery)
+            </p>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full bg-gradient-to-r from-gold to-gold-light text-background hover:opacity-90"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Placing Order...
+                </>
+              ) : (
+                "Place Order"
+              )}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
