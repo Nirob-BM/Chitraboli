@@ -150,8 +150,7 @@ export const AIAssistant = () => {
 
         {/* Input */}
         <div className="p-4 border-t border-purple-accent/20">
-          <div className="flex gap-2">
-            <input type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="Type your message..." className="flex-1 bg-muted/50 border border-purple-accent/20 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-purple-accent/50 transition-colors" />
+          <div className="flex gap-2">Chitraboli - চিত্রাবলী ✨<input type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="Type your message..." className="flex-1 bg-muted/50 border border-purple-accent/20 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-purple-accent/50 transition-colors" />
             <button onClick={sendMessage} disabled={!input.trim() || isLoading} className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-accent to-gold flex items-center justify-center disabled:opacity-50 transition-opacity">
               <Send className="w-4 h-4 text-white" />
             </button>

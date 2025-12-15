@@ -21,7 +21,7 @@ export function Footer() {
                 <Facebook className="h-5 w-5" />
               </a>
               <a href="#" className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
-                <Instagram className="h-5 w-5 & link-through https://www.instagram.com/chitraboli.shop?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" />
+                <Instagram className="h-5 w-5" />
               </a>
             </div>
           </div>
@@ -52,7 +52,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-3 text-muted-foreground text-sm">
                 <Mail className="h-4 w-4 text-primary" />
-                <span>info.chitraboli@gmail.com</span>
+                <span className="text-right text-xs">info.chitraboli@gmail.com</span>
               </li>
               <li className="flex items-start gap-3 text-muted-foreground text-sm">
                 <MapPin className="h-4 w-4 text-primary mt-0.5" />
