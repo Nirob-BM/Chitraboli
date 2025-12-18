@@ -137,6 +137,9 @@ const Admin = () => {
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     setUpdatingStatus(orderId);
     try {
+      const order = orders.find(o => o.id === orderId);
+      if (!order) throw new Error("Order not found");
+
       const { error } = await supabase
         .from('orders')
         .update({ status: newStatus })
@@ -144,7 +147,34 @@ const Admin = () => {
 
       if (error) throw error;
       
-      toast.success(`Order status updated to ${newStatus}`);
+      // Send email notification
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-order-status-email', {
+          body: {
+            customerName: order.customer_name,
+            customerEmail: order.customer_email,
+            orderId: order.id,
+            newStatus,
+            items: order.items.map(item => ({
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity
+            })),
+            totalAmount: order.total_amount
+          }
+        });
+
+        if (emailError) {
+          console.error('Email notification failed:', emailError);
+          toast.success(`Status updated to ${newStatus} (email notification failed)`);
+        } else {
+          toast.success(`Status updated to ${newStatus} - Email sent to customer`);
+        }
+      } catch (emailErr) {
+        console.error('Email notification error:', emailErr);
+        toast.success(`Status updated to ${newStatus} (email notification failed)`);
+      }
+      
       fetchOrders();
     } catch (error: any) {
       toast.error(`Failed to update status: ${error.message}`);
