@@ -7,6 +7,7 @@ import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Loader2 } from "lucide-react";
+import { sendOrderToWhatsApp } from "@/utils/orderNotification";
 
 interface CheckoutModalProps {
   open: boolean;
@@ -32,7 +33,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
     try {
       const sessionId = localStorage.getItem("chitraboli-session") || "";
       
-      const { error } = await supabase.from("orders").insert([{
+      const { data: orderData, error } = await supabase.from("orders").insert([{
         session_id: sessionId,
         customer_name: formData.name,
         customer_email: formData.email,
@@ -41,9 +42,26 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
         items: items as unknown as any,
         total_amount: totalPrice,
         status: "pending",
-      }]);
+      }]).select().single();
 
       if (error) throw error;
+
+      // Send order notification to WhatsApp
+      if (orderData) {
+        sendOrderToWhatsApp({
+          orderId: orderData.id,
+          customerName: formData.name,
+          customerEmail: formData.email,
+          customerPhone: formData.phone,
+          customerAddress: formData.address,
+          items: items.map(item => ({
+            name: item.product_name,
+            price: item.product_price,
+            quantity: item.quantity
+          })),
+          totalAmount: totalPrice
+        });
+      }
 
       setOrderPlaced(true);
       clearCart();
