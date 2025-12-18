@@ -92,6 +92,71 @@
     --border: 222 30% 20%;
     --input: 222 30% 20%;
     --ring: 38 65% 55%;
+
+    --gradient-hero: linear-gradient(135deg, hsl(270 50% 30%) 0%, hsl(222 47% 8%) 50%, hsl(222 47% 5%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(222 40% 14%) 0%, hsl(222 40% 10%) 100%);
+    --shadow-card: 0 10px 40px hsl(0 0% 0% / 0.3);
+  }
+
+  .light {
+    /* Light luxury cream theme */
+    --background: 40 30% 97%;
+    --foreground: 222 47% 15%;
+
+    --card: 40 25% 95%;
+    --card-foreground: 222 47% 15%;
+
+    --popover: 40 30% 98%;
+    --popover-foreground: 222 47% 15%;
+
+    /* Gold primary accent - slightly deeper for contrast */
+    --primary: 38 70% 45%;
+    --primary-foreground: 40 30% 98%;
+
+    /* Deep purple accent */
+    --secondary: 270 45% 45%;
+    --secondary-foreground: 40 30% 98%;
+
+    --muted: 40 20% 90%;
+    --muted-foreground: 222 20% 45%;
+
+    /* Rose gold accent */
+    --accent: 15 50% 55%;
+    --accent-foreground: 40 30% 98%;
+
+    --destructive: 0 84% 50%;
+    --destructive-foreground: 40 30% 98%;
+
+    --border: 40 20% 85%;
+    --input: 40 20% 88%;
+    --ring: 38 70% 45%;
+
+    /* Custom tokens for light mode */
+    --gold: 38 70% 45%;
+    --gold-light: 45 65% 55%;
+    --rose-gold: 15 50% 55%;
+    --purple-accent: 270 50% 45%;
+    --purple-glow: 270 60% 55%;
+
+    /* Light mode gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(40 30% 95%) 0%, hsl(270 30% 90%) 50%, hsl(40 30% 97%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(38 70% 45%) 0%, hsl(15 50% 55%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(40 25% 97%) 0%, hsl(40 25% 93%) 100%);
+    --gradient-purple: linear-gradient(135deg, hsl(270 45% 45%) 0%, hsl(300 40% 50%) 100%);
+
+    /* Light mode shadows */
+    --shadow-gold: 0 0 40px hsl(38 70% 45% / 0.15);
+    --shadow-card: 0 10px 40px hsl(222 30% 20% / 0.08);
+    --shadow-glow: 0 0 60px hsl(270 50% 50% / 0.15);
+
+    --sidebar-background: 40 25% 95%;
+    --sidebar-foreground: 222 47% 15%;
+    --sidebar-primary: 38 70% 45%;
+    --sidebar-primary-foreground: 40 30% 98%;
+    --sidebar-accent: 40 20% 90%;
+    --sidebar-accent-foreground: 222 47% 15%;
+    --sidebar-border: 40 20% 85%;
+    --sidebar-ring: 38 70% 45%;
   }
 }
 
