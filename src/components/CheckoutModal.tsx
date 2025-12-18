@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Loader2 } from "lucide-react";
-import { sendOrderToWhatsApp } from "@/utils/orderNotification";
+import { CheckCircle, Loader2, MessageCircle } from "lucide-react";
+import { formatOrderForWhatsApp } from "@/utils/orderNotification";
 
 interface CheckoutModalProps {
   open: boolean;
@@ -25,6 +25,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
     phone: "",
     address: "",
   });
+  const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,9 +47,9 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
 
       if (error) throw error;
 
-      // Send order notification to WhatsApp
+      // Generate WhatsApp URL for user to click (not auto-open which gets blocked)
       if (orderData) {
-        sendOrderToWhatsApp({
+        const message = formatOrderForWhatsApp({
           orderId: orderData.id,
           customerName: formData.name,
           customerEmail: formData.email,
@@ -61,6 +62,8 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
           })),
           totalAmount: totalPrice
         });
+        const encodedMessage = encodeURIComponent(message);
+        setWhatsappUrl(`https://wa.me/8801308697630?text=${encodedMessage}`);
       }
 
       setOrderPlaced(true);
@@ -71,11 +74,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
         description: "We'll contact you shortly to confirm your order.",
       });
 
-      setTimeout(() => {
-        onOpenChange(false);
-        setOrderPlaced(false);
-        setFormData({ name: "", email: "", phone: "", address: "" });
-      }, 3000);
+      // Don't auto-close, let user click WhatsApp button or close manually
     } catch (error) {
       console.error("Order error:", error);
       toast({
@@ -88,18 +87,43 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
     }
   };
 
+  const handleClose = () => {
+    onOpenChange(false);
+    setOrderPlaced(false);
+    setWhatsappUrl(null);
+    setFormData({ name: "", email: "", phone: "", address: "" });
+  };
+
   if (orderPlaced) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="bg-card border-gold/20 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Order Confirmed</DialogTitle>
+            <DialogDescription className="sr-only">Your order has been placed successfully</DialogDescription>
+          </DialogHeader>
           <div className="flex flex-col items-center justify-center py-8">
             <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mb-4 animate-scale-in">
               <CheckCircle className="w-12 h-12 text-green-500" />
             </div>
             <h2 className="font-display text-2xl text-foreground mb-2">Order Confirmed!</h2>
-            <p className="text-muted-foreground text-center">
+            <p className="text-muted-foreground text-center mb-6">
               Thank you for your order. We'll reach out to you soon.
             </p>
+            {whatsappUrl && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors"
+              >
+                <MessageCircle className="w-5 h-5" />
+                Send Order via WhatsApp
+              </a>
+            )}
+            <Button variant="ghost" className="mt-4" onClick={handleClose}>
+              Close
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -111,6 +135,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
       <DialogContent className="bg-card border-gold/20 max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl text-foreground">Checkout</DialogTitle>
+          <DialogDescription>Fill in your details to complete your order</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">

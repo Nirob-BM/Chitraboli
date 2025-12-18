@@ -11,11 +11,22 @@ import { toast } from "sonner";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface OrderItem {
-  name: string;
-  price: number;
+  name?: string;
+  product_name?: string;
+  price?: number;
+  product_price?: number;
   quantity: number;
   image?: string;
+  product_image?: string;
 }
+
+// Helper to normalize order item data
+const normalizeOrderItem = (item: OrderItem) => ({
+  name: item.name || item.product_name || 'Unknown',
+  price: item.price || item.product_price || 0,
+  quantity: item.quantity || 1,
+  image: item.image || item.product_image
+});
 
 interface Order {
   id: string;
@@ -155,11 +166,14 @@ const Admin = () => {
             customerEmail: order.customer_email,
             orderId: order.id,
             newStatus,
-            items: order.items.map(item => ({
-              name: item.name,
-              price: item.price,
-              quantity: item.quantity
-            })),
+            items: order.items.map(item => {
+              const normalized = normalizeOrderItem(item);
+              return {
+                name: normalized.name,
+                price: normalized.price,
+                quantity: normalized.quantity
+              };
+            }),
             totalAmount: order.total_amount
           }
         });
@@ -203,7 +217,10 @@ const Admin = () => {
 
   const openWhatsApp = (order: Order) => {
     const itemsList = order.items
-      .map((item) => `• ${item.name} x${item.quantity} - ৳${item.price.toLocaleString()}`)
+      .map((item) => {
+        const normalized = normalizeOrderItem(item);
+        return `• ${normalized.name} x${normalized.quantity} - ৳${normalized.price.toLocaleString()}`;
+      })
       .join('\n');
 
     const message = `Hi ${order.customer_name}, regarding your order #${order.id.slice(0, 8)}:\n\n${itemsList}\n\nTotal: ৳${order.total_amount.toLocaleString()}`;
@@ -390,14 +407,17 @@ const Admin = () => {
                           Order Items
                         </h4>
                         <div className="space-y-2 pl-10">
-                          {order.items.map((item, idx) => (
-                            <div key={idx} className="flex justify-between items-center">
-                              <span className="text-foreground">
-                                {item.name} <span className="text-muted-foreground">x{item.quantity}</span>
-                              </span>
-                              <span className="text-primary font-medium">৳{item.price.toLocaleString()}</span>
-                            </div>
-                          ))}
+                          {order.items.map((item, idx) => {
+                            const normalized = normalizeOrderItem(item);
+                            return (
+                              <div key={idx} className="flex justify-between items-center">
+                                <span className="text-foreground">
+                                  {normalized.name} <span className="text-muted-foreground">x{normalized.quantity}</span>
+                                </span>
+                                <span className="text-primary font-medium">৳{normalized.price.toLocaleString()}</span>
+                              </div>
+                            );
+                          })}
                           <div className="border-t border-border pt-2 mt-2 flex justify-between items-center">
                             <span className="font-semibold text-foreground">Total</span>
                             <span className="font-display text-xl text-primary">৳{order.total_amount.toLocaleString()}</span>
