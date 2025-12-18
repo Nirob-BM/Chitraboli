@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, Phone, Mail, MapPin, Calendar, ExternalLink } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Package, Phone, Mail, MapPin, Calendar, ExternalLink, LogOut, Loader2 } from "lucide-react";
 import { Layout } from "@/components/Layout";
-import type { Json } from "@/integrations/supabase/types";
+import { toast } from "sonner";
+import type { User, Session } from "@supabase/supabase-js";
 
 interface OrderItem {
   name: string;
@@ -26,29 +29,94 @@ interface Order {
   created_at: string;
 }
 
+const ORDER_STATUSES = [
+  { value: 'pending', label: 'Pending', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' },
+  { value: 'confirmed', label: 'Confirmed', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+  { value: 'shipped', label: 'Shipped', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
+  { value: 'delivered', label: 'Delivered', color: 'bg-green-500/20 text-green-400 border-green-500/30' },
+  { value: 'cancelled', label: 'Cancelled', color: 'bg-red-500/20 text-red-400 border-red-500/30' },
+];
+
 const Admin = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchOrders();
-    
-    // Subscribe to realtime updates
-    const channel = supabase
-      .channel('orders-channel')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        () => {
-          fetchOrders();
-        }
-      )
-      .subscribe();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        setTimeout(() => {
+          checkAdminRole(session.user.id);
+        }, 0);
+      } else {
+        setIsAdmin(false);
+        setAuthChecking(false);
+      }
+    });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        checkAdminRole(session.user.id);
+      } else {
+        setAuthChecking(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchOrders();
+      
+      const channel = supabase
+        .channel('orders-channel')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders' },
+          () => {
+            fetchOrders();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [isAdmin]);
+
+  const checkAdminRole = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .single();
+      
+      if (data && !error) {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+        toast.error("You don't have admin access");
+      }
+    } catch (error) {
+      setIsAdmin(false);
+    } finally {
+      setAuthChecking(false);
+    }
+  };
 
   const fetchOrders = async () => {
     const { data, error } = await supabase
@@ -66,15 +134,33 @@ const Admin = () => {
     setLoading(false);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-      case 'confirmed': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      case 'shipped': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-      case 'delivered': return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'cancelled': return 'bg-red-500/20 text-red-400 border-red-500/30';
-      default: return 'bg-muted text-muted-foreground';
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    setUpdatingStatus(orderId);
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', orderId);
+
+      if (error) throw error;
+      
+      toast.success(`Order status updated to ${newStatus}`);
+      fetchOrders();
+    } catch (error: any) {
+      toast.error(`Failed to update status: ${error.message}`);
+    } finally {
+      setUpdatingStatus(null);
     }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth');
+  };
+
+  const getStatusColor = (status: string) => {
+    const statusObj = ORDER_STATUSES.find(s => s.value === status);
+    return statusObj?.color || 'bg-muted text-muted-foreground';
   };
 
   const formatDate = (dateString: string) => {
@@ -95,6 +181,65 @@ const Admin = () => {
     window.open(`https://wa.me/${order.customer_phone.replace(/[^0-9]/g, '')}?text=${encodedMessage}`, '_blank');
   };
 
+  // Auth checking state
+  if (authChecking) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-muted-foreground">Checking authentication...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Not logged in
+  if (!user) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center">
+          <Card className="bg-card border-border max-w-md w-full mx-4">
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <Package className="w-16 h-16 text-muted-foreground mb-4" />
+              <h3 className="text-xl font-display text-foreground mb-2">Admin Access Required</h3>
+              <p className="text-muted-foreground text-center mb-6">
+                Please login to access the order management panel.
+              </p>
+              <Button onClick={() => navigate('/auth')}>
+                Login to Admin
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Logged in but not admin
+  if (!isAdmin) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center">
+          <Card className="bg-card border-border max-w-md w-full mx-4">
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <Package className="w-16 h-16 text-red-400 mb-4" />
+              <h3 className="text-xl font-display text-foreground mb-2">Access Denied</h3>
+              <p className="text-muted-foreground text-center mb-6">
+                You don't have admin privileges to access this page.
+              </p>
+              <Button variant="outline" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
+
   if (loading) {
     return (
       <Layout>
@@ -114,9 +259,15 @@ const Admin = () => {
               <h1 className="font-display text-3xl text-foreground">Order Management</h1>
               <p className="text-muted-foreground mt-1">View and manage all customer orders</p>
             </div>
-            <Badge variant="outline" className="text-lg px-4 py-2">
-              {orders.length} Orders
-            </Badge>
+            <div className="flex items-center gap-4">
+              <Badge variant="outline" className="text-lg px-4 py-2">
+                {orders.length} Orders
+              </Badge>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
 
           {orders.length === 0 ? (
@@ -141,9 +292,31 @@ const Admin = () => {
                           {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar className="w-4 h-4" />
-                        {formatDate(order.created_at)}
+                      <div className="flex items-center gap-4">
+                        <Select
+                          value={order.status}
+                          onValueChange={(value) => updateOrderStatus(order.id, value)}
+                          disabled={updatingStatus === order.id}
+                        >
+                          <SelectTrigger className="w-[160px]">
+                            {updatingStatus === order.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <SelectValue placeholder="Update status" />
+                            )}
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ORDER_STATUSES.map((status) => (
+                              <SelectItem key={status.value} value={status.value}>
+                                {status.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Calendar className="w-4 h-4" />
+                          {formatDate(order.created_at)}
+                        </div>
                       </div>
                     </div>
                   </CardHeader>
