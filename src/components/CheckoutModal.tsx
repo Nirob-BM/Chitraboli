@@ -8,6 +8,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Loader2, MessageCircle } from "lucide-react";
 import { formatOrderForWhatsApp } from "@/utils/orderNotification";
+import { z } from "zod";
+
+// Zod schema for order item validation
+const OrderItemSchema = z.object({
+  product_id: z.string().min(1),
+  product_name: z.string().min(1).max(200),
+  product_price: z.number().positive(),
+  quantity: z.number().int().positive(),
+  product_image: z.string().nullable().optional()
+});
+
+const OrderItemsSchema = z.array(OrderItemSchema).min(1);
 
 interface CheckoutModalProps {
   open: boolean;
@@ -34,13 +46,22 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
     try {
       const sessionId = localStorage.getItem("chitraboli-session") || "";
       
+      // Validate and sanitize order items
+      const validatedItems = OrderItemsSchema.parse(items.map(item => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        product_price: item.product_price,
+        quantity: item.quantity,
+        product_image: item.product_image || null
+      })));
+      
       const { data: orderData, error } = await supabase.from("orders").insert([{
         session_id: sessionId,
         customer_name: formData.name,
         customer_email: formData.email,
         customer_phone: formData.phone,
         customer_address: formData.address,
-        items: items as unknown as any,
+        items: validatedItems,
         total_amount: totalPrice,
         status: "pending",
       }]).select().single();
