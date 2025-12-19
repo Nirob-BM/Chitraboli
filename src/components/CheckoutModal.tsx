@@ -3,10 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Loader2, MessageCircle } from "lucide-react";
+import { CheckCircle, Loader2, MessageCircle, Smartphone, Banknote, Copy } from "lucide-react";
 import { formatOrderForWhatsApp } from "@/utils/orderNotification";
 import { z } from "zod";
 
@@ -37,7 +39,11 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
     phone: "",
     address: "",
   });
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "nagad">("cod");
+  const [transactionId, setTransactionId] = useState("");
   const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
+
+  const PAYMENT_NUMBER = "01308697630";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,7 +118,17 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
     onOpenChange(false);
     setOrderPlaced(false);
     setWhatsappUrl(null);
+    setTransactionId("");
+    setPaymentMethod("cod");
     setFormData({ name: "", email: "", phone: "", address: "" });
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied!",
+      description: "Number copied to clipboard",
+    });
   };
 
   if (orderPlaced) {
@@ -205,17 +221,85 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
             />
           </div>
 
+          {/* Payment Method Selection */}
+          <div className="border-t border-gold/20 pt-4">
+            <label className="text-sm text-muted-foreground mb-3 block">Payment Method *</label>
+            <RadioGroup
+              value={paymentMethod}
+              onValueChange={(value) => setPaymentMethod(value as "cod" | "bkash" | "nagad")}
+              className="space-y-3"
+            >
+              <div className="flex items-center space-x-3 p-3 rounded-lg border border-gold/20 hover:border-gold/40 transition-colors">
+                <RadioGroupItem value="cod" id="cod" />
+                <Label htmlFor="cod" className="flex items-center gap-2 cursor-pointer flex-1">
+                  <Banknote className="w-5 h-5 text-green-600" />
+                  <span>Cash on Delivery</span>
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-3 p-3 rounded-lg border border-gold/20 hover:border-gold/40 transition-colors">
+                <RadioGroupItem value="bkash" id="bkash" />
+                <Label htmlFor="bkash" className="flex items-center gap-2 cursor-pointer flex-1">
+                  <Smartphone className="w-5 h-5 text-pink-600" />
+                  <span>bKash</span>
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-3 p-3 rounded-lg border border-gold/20 hover:border-gold/40 transition-colors">
+                <RadioGroupItem value="nagad" id="nagad" />
+                <Label htmlFor="nagad" className="flex items-center gap-2 cursor-pointer flex-1">
+                  <Smartphone className="w-5 h-5 text-orange-600" />
+                  <span>Nagad</span>
+                </Label>
+              </div>
+            </RadioGroup>
+
+            {/* Mobile Banking Instructions */}
+            {(paymentMethod === "bkash" || paymentMethod === "nagad") && (
+              <div className="mt-4 p-4 bg-muted/50 rounded-lg border border-gold/20">
+                <p className="text-sm font-medium mb-2">
+                  {paymentMethod === "bkash" ? "bKash" : "Nagad"} Payment Instructions:
+                </p>
+                <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside mb-3">
+                  <li>Open your {paymentMethod === "bkash" ? "bKash" : "Nagad"} app</li>
+                  <li>Send ৳{totalPrice.toLocaleString()} to the number below</li>
+                  <li>Enter the Transaction ID after payment</li>
+                </ol>
+                <div className="flex items-center gap-2 p-2 bg-background rounded border">
+                  <span className="font-mono font-medium flex-1">{PAYMENT_NUMBER}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(PAYMENT_NUMBER)}
+                    className="h-8 px-2"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  <label className="text-sm text-muted-foreground">Transaction ID *</label>
+                  <Input
+                    required
+                    value={transactionId}
+                    onChange={(e) => setTransactionId(e.target.value)}
+                    className="bg-background border-gold/20 focus:border-gold"
+                    placeholder="Enter your transaction ID"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="border-t border-gold/20 pt-4">
             <div className="flex justify-between mb-4">
               <span className="text-muted-foreground">Total Amount:</span>
               <span className="font-display text-gold text-xl">৳{totalPrice.toLocaleString()}</span>
             </div>
-            <p className="text-xs text-muted-foreground mb-4">
-              * Payment will be collected on delivery (Cash on Delivery)
-            </p>
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || ((paymentMethod === "bkash" || paymentMethod === "nagad") && !transactionId.trim())}
               className="w-full bg-gradient-to-r from-gold to-gold-light text-background hover:opacity-90"
             >
               {isSubmitting ? (
