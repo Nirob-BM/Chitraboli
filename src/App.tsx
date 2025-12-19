@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { AIAssistant } from "@/components/AIAssistant";
-import { SocialSupport } from "@/components/SocialSupport";
+
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
 import Collections from "./pages/Collections";
@@ -43,7 +43,7 @@ const App = () => (
           </BrowserRouter>
           <CartDrawer />
           <AIAssistant />
-          <SocialSupport />
+          
         </TooltipProvider>
       </CartProvider>
     </ThemeProvider>
