@@ -21,6 +21,8 @@ interface OrderStatusEmailRequest {
   newStatus: string;
   items: OrderItem[];
   totalAmount: number;
+  paymentMethod?: string;
+  transactionId?: string | null;
 }
 
 const getStatusMessage = (status: string): { subject: string; message: string; emoji: string } => {
@@ -58,6 +60,29 @@ const getStatusMessage = (status: string): { subject: string; message: string; e
   }
 };
 
+const getPaymentMethodLabel = (method: string): string => {
+  switch (method) {
+    case 'bkash':
+      return 'bKash';
+    case 'nagad':
+      return 'Nagad';
+    case 'cod':
+    default:
+      return 'Cash on Delivery';
+  }
+};
+
+const getPaymentMethodColor = (method: string): string => {
+  switch (method) {
+    case 'bkash':
+      return '#E2136E';
+    case 'nagad':
+      return '#F6921E';
+    default:
+      return '#22C55E';
+  }
+};
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("Received request to send order status email");
 
@@ -66,11 +91,13 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { customerName, customerEmail, orderId, newStatus, items, totalAmount }: OrderStatusEmailRequest = await req.json();
+    const { customerName, customerEmail, orderId, newStatus, items, totalAmount, paymentMethod, transactionId }: OrderStatusEmailRequest = await req.json();
 
     console.log(`Sending status email to ${customerEmail} for order ${orderId}, status: ${newStatus}`);
 
     const { subject, message, emoji } = getStatusMessage(newStatus);
+    const paymentLabel = getPaymentMethodLabel(paymentMethod || 'cod');
+    const paymentColor = getPaymentMethodColor(paymentMethod || 'cod');
     
     const itemsHtml = items
       .map(item => `<tr>
@@ -79,6 +106,20 @@ const handler = async (req: Request): Promise<Response> => {
         <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">৳${item.price.toLocaleString()}</td>
       </tr>`)
       .join('');
+
+    // Payment info section
+    const paymentHtml = `
+      <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${paymentColor};">
+        <p style="margin: 0 0 8px 0; font-weight: bold; color: #333;">Payment Details</p>
+        <p style="margin: 0; color: #555;">
+          <strong>Method:</strong> ${paymentLabel}
+        </p>
+        ${transactionId ? `<p style="margin: 5px 0 0 0; color: #555;">
+          <strong>Transaction ID:</strong> <code style="background: #e0e0e0; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${transactionId}</code>
+        </p>` : ''}
+        ${paymentMethod === 'cod' ? `<p style="margin: 5px 0 0 0; color: #888; font-size: 12px;">Payment will be collected upon delivery</p>` : ''}
+      </div>
+    `;
 
     const emailResponse = await resend.emails.send({
       from: "Chitraboli <onboarding@resend.dev>",
@@ -108,6 +149,8 @@ const handler = async (req: Request): Promise<Response> => {
               <p style="margin: 0 0 10px 0; color: #888; font-size: 14px;">Order ID</p>
               <p style="margin: 0; font-family: monospace; font-size: 16px; color: #1a1a2e;">#${orderId.slice(0, 8).toUpperCase()}</p>
             </div>
+
+            ${paymentHtml}
 
             <h3 style="color: #1a1a2e; border-bottom: 2px solid #d4af37; padding-bottom: 10px;">Order Summary</h3>
             

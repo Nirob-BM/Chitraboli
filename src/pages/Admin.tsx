@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, Phone, Mail, MapPin, Calendar, ExternalLink, LogOut, Loader2 } from "lucide-react";
+import { Package, Phone, Mail, MapPin, Calendar, ExternalLink, LogOut, Loader2, CreditCard, Smartphone, Banknote } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { toast } from "sonner";
 import type { User, Session } from "@supabase/supabase-js";
@@ -38,6 +38,8 @@ interface Order {
   total_amount: number;
   status: string;
   created_at: string;
+  payment_method?: string;
+  transaction_id?: string;
 }
 
 const ORDER_STATUSES = [
@@ -172,7 +174,9 @@ const Admin = () => {
                 quantity: normalized.quantity
               };
             }),
-            totalAmount: order.total_amount
+            totalAmount: order.total_amount,
+            paymentMethod: order.payment_method || 'cod',
+            transactionId: order.transaction_id || null
           }
         });
 
@@ -393,6 +397,32 @@ const Admin = () => {
                             <MapPin className="w-4 h-4 mt-1 flex-shrink-0" />
                             <span>{order.customer_address}</span>
                           </p>
+                        </div>
+
+                        {/* Payment Info */}
+                        <div className="mt-4 pt-3 border-t border-border/50">
+                          <div className="flex items-center gap-2 text-sm">
+                            {order.payment_method === 'bkash' ? (
+                              <Smartphone className="w-4 h-4 text-pink-500" />
+                            ) : order.payment_method === 'nagad' ? (
+                              <Smartphone className="w-4 h-4 text-orange-500" />
+                            ) : (
+                              <Banknote className="w-4 h-4 text-green-500" />
+                            )}
+                            <span className="text-muted-foreground">Payment:</span>
+                            <span className="font-medium capitalize">
+                              {order.payment_method === 'cod' ? 'Cash on Delivery' : order.payment_method || 'COD'}
+                            </span>
+                          </div>
+                          {order.transaction_id && (
+                            <div className="flex items-center gap-2 text-sm mt-1">
+                              <CreditCard className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">TxID:</span>
+                              <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded">
+                                {order.transaction_id}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 

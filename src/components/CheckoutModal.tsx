@@ -70,6 +70,8 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
         items: validatedItems,
         total_amount: totalPrice,
         status: "pending",
+        payment_method: paymentMethod,
+        transaction_id: paymentMethod !== "cod" ? transactionId.trim() : null,
       }]).select().single();
 
       if (error) throw error;
