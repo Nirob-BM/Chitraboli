@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Facebook, Instagram, Mail, Phone, MapPin } from "lucide-react";
+import { Facebook, Instagram, Mail, Phone, MapPin, MessageCircle } from "lucide-react";
 export function Footer() {
   return <footer className="bg-card border-t border-border">
       <div className="container mx-auto px-4 py-16">
@@ -20,8 +20,11 @@ export function Footer() {
               <a href="https://www.facebook.com/chitraboli1" target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href="#" className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+              <a href="https://instagram.com/chitraboli.shop/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                 <Instagram className="h-5 w-5" />
+              </a>
+              <a href="https://wa.me/8801308697630" target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors">
+                <MessageCircle className="h-5 w-5" />
               </a>
             </div>
           </div>
