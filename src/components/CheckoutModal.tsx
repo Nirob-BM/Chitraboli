@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Loader2, MessageCircle, Banknote, Copy } from "lucide-react";
 import { formatOrderForWhatsApp } from "@/utils/orderNotification";
 import { z } from "zod";
+import bkashLogo from "@/assets/bkash-logo.png";
+import nagadLogo from "@/assets/nagad-logo.svg";
 
 // Zod schema for order item validation
 const OrderItemSchema = z.object({
@@ -246,10 +248,8 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
               <div className="flex items-center space-x-3 p-3 rounded-lg border border-gold/20 hover:border-gold/40 transition-colors">
                 <RadioGroupItem value="bkash" id="bkash" />
                 <Label htmlFor="bkash" className="flex items-center gap-3 cursor-pointer flex-1">
-                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#E2136E] flex items-center justify-center">
-                    <svg viewBox="0 0 24 24" className="w-7 h-7" fill="white">
-                      <path d="M20.08 9.32l-3.24-5.22c-.36-.58-1-.93-1.68-.93h-6.3c-.7 0-1.34.35-1.7.95L3.94 9.3c-.34.56-.34 1.26 0 1.82l3.22 5.18c.36.58 1 .93 1.68.93h6.3c.7 0 1.34-.35 1.7-.95l3.22-5.18c.36-.56.36-1.24.02-1.78zm-8.08 4.2c-1.85 0-3.35-1.5-3.35-3.35 0-1.85 1.5-3.35 3.35-3.35 1.85 0 3.35 1.5 3.35 3.35 0 1.85-1.5 3.35-3.35 3.35z"/>
-                    </svg>
+                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#E2136E] flex items-center justify-center p-1">
+                    <img src={bkashLogo} alt="bKash" className="w-full h-full object-contain" />
                   </div>
                   <div className="flex flex-col">
                     <span className="font-medium text-[#E2136E]">bKash</span>
@@ -262,10 +262,8 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
               <div className="flex items-center space-x-3 p-3 rounded-lg border border-gold/20 hover:border-gold/40 transition-colors">
                 <RadioGroupItem value="nagad" id="nagad" />
                 <Label htmlFor="nagad" className="flex items-center gap-3 cursor-pointer flex-1">
-                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#F6921E] flex items-center justify-center">
-                    <svg viewBox="0 0 24 24" className="w-7 h-7" fill="white">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-7v4h4l-5 7z"/>
-                    </svg>
+                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center p-1">
+                    <img src={nagadLogo} alt="Nagad" className="w-full h-full object-contain" />
                   </div>
                   <div className="flex flex-col">
                     <span className="font-medium text-[#F6921E]">Nagad</span>
@@ -283,18 +281,14 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
                   : "bg-[#F6921E]/5 border-[#F6921E]/20"
               }`}>
                 <div className="flex items-center gap-2 mb-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                    paymentMethod === "bkash" ? "bg-[#E2136E]" : "bg-[#F6921E]"
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden p-1 ${
+                    paymentMethod === "bkash" ? "bg-[#E2136E]" : "bg-white"
                   }`}>
-                    {paymentMethod === "bkash" ? (
-                      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="white">
-                        <path d="M20.08 9.32l-3.24-5.22c-.36-.58-1-.93-1.68-.93h-6.3c-.7 0-1.34.35-1.7.95L3.94 9.3c-.34.56-.34 1.26 0 1.82l3.22 5.18c.36.58 1 .93 1.68.93h6.3c.7 0 1.34-.35 1.7-.95l3.22-5.18c.36-.56.36-1.24.02-1.78zm-8.08 4.2c-1.85 0-3.35-1.5-3.35-3.35 0-1.85 1.5-3.35 3.35-3.35 1.85 0 3.35 1.5 3.35 3.35 0 1.85-1.5 3.35-3.35 3.35z"/>
-                      </svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="white">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-7v4h4l-5 7z"/>
-                      </svg>
-                    )}
+                    <img 
+                      src={paymentMethod === "bkash" ? bkashLogo : nagadLogo} 
+                      alt={paymentMethod === "bkash" ? "bKash" : "Nagad"} 
+                      className="w-full h-full object-contain" 
+                    />
                   </div>
                   <span className={`font-semibold ${
                     paymentMethod === "bkash" ? "text-[#E2136E]" : "text-[#F6921E]"

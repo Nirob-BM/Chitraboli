@@ -1,6 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+const SESSION_KEY = "chitraboli-session";
+
+// Initialize session ID on first load
+const getOrCreateSessionId = (): string => {
+  let sessionId = localStorage.getItem(SESSION_KEY);
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    localStorage.setItem(SESSION_KEY, sessionId);
+  }
+  return sessionId;
+};
+
 export interface CartItem {
   id: string;
   product_id: string;
@@ -25,6 +37,9 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_KEY = "chitraboli-cart";
+
+// Ensure session is initialized
+getOrCreateSessionId();
 
 // Helper to get/set localStorage cart
 const getLocalCart = (): CartItem[] => {
