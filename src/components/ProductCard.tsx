@@ -4,7 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { useCart } from "@/contexts/CartContext";
 
 interface ProductCardProps {
-  id: number;
+  id: string | number;
   name: string;
   price: number;
   image: string;

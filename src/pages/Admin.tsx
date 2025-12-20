@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Package, Phone, Mail, MapPin, Calendar, ExternalLink, LogOut, Loader2, 
   CreditCard, Smartphone, Banknote, Search, Filter, Trash2, X, BarChart3,
-  MessageSquare, Bell
+  MessageSquare, Bell, ShoppingBag
 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { toast } from "sonner";
@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { OrderStatistics } from "@/components/admin/OrderStatistics";
 import { ContactMessages } from "@/components/admin/ContactMessages";
+import { ProductManagement } from "@/components/admin/ProductManagement";
 import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 
 interface OrderItem {
@@ -440,7 +441,7 @@ const Admin = () => {
 
           {/* Tabs Navigation */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-1">
+            <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-1">
               <TabsTrigger 
                 value="orders" 
                 className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -452,6 +453,13 @@ const Admin = () => {
                     {newOrderCount}
                   </Badge>
                 )}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="products" 
+                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span className="hidden sm:inline">Products</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="statistics" 
@@ -468,6 +476,15 @@ const Admin = () => {
                 <span className="hidden sm:inline">Messages</span>
               </TabsTrigger>
             </TabsList>
+
+            {/* Products Tab */}
+            <TabsContent value="products">
+              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
+                <CardContent className="p-4 sm:p-6">
+                  <ProductManagement />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             {/* Orders Tab */}
             <TabsContent value="orders" className="space-y-6">
