@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Package, Phone, Mail, MapPin, Calendar, ExternalLink, LogOut, Loader2, 
   CreditCard, Smartphone, Banknote, Search, Filter, Trash2, X, BarChart3,
-  MessageSquare, Bell, ShoppingBag, Shield
+  MessageSquare, Bell, ShoppingBag, Shield, Tag
 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { toast } from "sonner";
@@ -29,6 +29,7 @@ import { OrderStatistics } from "@/components/admin/OrderStatistics";
 import { ContactMessages } from "@/components/admin/ContactMessages";
 import { ProductManagement } from "@/components/admin/ProductManagement";
 import { SecurityDashboard } from "@/components/admin/SecurityDashboard";
+import { CategoryManagement } from "@/components/admin/CategoryManagement";
 import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 
 interface OrderItem {
@@ -442,7 +443,7 @@ const Admin = () => {
 
           {/* Tabs Navigation */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-flex bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-1">
+            <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-flex bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-1">
               <TabsTrigger 
                 value="orders" 
                 className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -461,6 +462,13 @@ const Admin = () => {
               >
                 <ShoppingBag className="w-4 h-4" />
                 <span className="hidden sm:inline">Products</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="categories" 
+                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <Tag className="w-4 h-4" />
+                <span className="hidden sm:inline">Categories</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="statistics" 
@@ -490,6 +498,15 @@ const Admin = () => {
               <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
                 <CardContent className="p-4 sm:p-6">
                   <ProductManagement />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Categories Tab */}
+            <TabsContent value="categories">
+              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
+                <CardContent className="p-4 sm:p-6">
+                  <CategoryManagement />
                 </CardContent>
               </Card>
             </TabsContent>
