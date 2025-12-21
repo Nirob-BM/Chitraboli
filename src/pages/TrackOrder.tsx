@@ -431,8 +431,26 @@ const TrackOrder = () => {
 
       {/* About Chitraboli Section */}
       <section className="py-16 relative overflow-hidden">
+        {/* Gradient backgrounds */}
         <div className="absolute inset-0 bg-gradient-to-br from-gold/10 via-background to-gold-light/5" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-gold/20 via-transparent to-transparent opacity-50" />
+        
+        {/* Decorative sparkles */}
+        <div className="absolute top-8 left-[10%] w-2 h-2 bg-gold/60 rounded-full animate-pulse" />
+        <div className="absolute top-16 left-[25%] w-1.5 h-1.5 bg-gold-light/50 rounded-full animate-pulse" style={{ animationDelay: '0.3s' }} />
+        <div className="absolute top-12 right-[15%] w-2.5 h-2.5 bg-gold/40 rounded-full animate-pulse" style={{ animationDelay: '0.6s' }} />
+        <div className="absolute top-20 right-[30%] w-1 h-1 bg-gold-light/60 rounded-full animate-pulse" style={{ animationDelay: '0.9s' }} />
+        <div className="absolute bottom-12 left-[20%] w-1.5 h-1.5 bg-gold/50 rounded-full animate-pulse" style={{ animationDelay: '1.2s' }} />
+        <div className="absolute bottom-8 right-[20%] w-2 h-2 bg-gold-light/40 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
+        <div className="absolute bottom-16 left-[35%] w-1 h-1 bg-gold/70 rounded-full animate-pulse" style={{ animationDelay: '0.8s' }} />
+        <div className="absolute bottom-20 right-[35%] w-1.5 h-1.5 bg-gold-light/50 rounded-full animate-pulse" style={{ animationDelay: '1.1s' }} />
+        
+        {/* Decorative diamond pattern */}
+        <div className="absolute top-1/2 left-4 transform -translate-y-1/2 w-3 h-3 border border-gold/30 rotate-45" />
+        <div className="absolute top-1/2 right-4 transform -translate-y-1/2 w-3 h-3 border border-gold/30 rotate-45" />
+        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 w-2 h-2 border border-gold-light/20 rotate-45" />
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-2 h-2 border border-gold-light/20 rotate-45" />
+        
         <div className="container mx-auto px-4 text-center max-w-2xl relative z-10">
           <h2 className="font-display text-2xl md:text-3xl font-light text-foreground mb-2">
             About <span className="text-gold">Chitraboli</span>
