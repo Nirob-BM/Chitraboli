@@ -128,25 +128,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* About Preview */}
-      <section className="py-20 bg-card">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="font-display text-4xl md:text-5xl font-light text-foreground mb-6">
-              About <span className="text-gold">Chitraboli</span>
-            </h2>
-            <p className="font-display text-xl text-muted-foreground mb-4">চিত্রাবলী ✨</p>
-            <p className="text-muted-foreground leading-relaxed mb-8">Chitraboli – চিত্রাবলী creates handmade jewellery inspired by art, tradition and passion. Every piece is crafted with love to make you shine. We believe that jewellery is not just an accessory, but a reflection of your unique personality and style.</p>
-            <Button variant="gold" size="lg" asChild>
-              <Link to="/about">
-                Learn More About Us
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="py-24 gradient-hero relative overflow-hidden">
         <div className="absolute inset-0 opacity-20">
