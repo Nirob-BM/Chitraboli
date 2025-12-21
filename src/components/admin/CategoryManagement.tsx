@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Edit2, Trash2, Tag, Save, X, Package } from "lucide-react";
+import { Loader2, Edit2, Trash2, Tag, Save, X, Package, Plus } from "lucide-react";
 
 interface CategoryInfo {
   name: string;
@@ -31,6 +31,8 @@ export const CategoryManagement = () => {
   const [saving, setSaving] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<CategoryInfo | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showAddNew, setShowAddNew] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
 
   useEffect(() => {
     fetchCategories();
@@ -138,6 +140,44 @@ export const CategoryManagement = () => {
     setNewName("");
   };
 
+  const handleAddCategory = async () => {
+    const trimmedName = newCategoryName.trim();
+    if (!trimmedName) {
+      toast({ title: "Error", description: "Category name cannot be empty", variant: "destructive" });
+      return;
+    }
+
+    if (categories.some((c) => c.name.toLowerCase() === trimmedName.toLowerCase())) {
+      toast({ title: "Error", description: "Category already exists", variant: "destructive" });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Create a placeholder product to establish the category
+      const { error } = await supabase.from("products").insert({
+        name: `[Placeholder - ${trimmedName}]`,
+        price: 0,
+        category: trimmedName,
+        in_stock: false,
+        featured: false,
+        description: "Placeholder product for new category. You can delete this after adding real products.",
+      });
+
+      if (error) throw error;
+
+      toast({ title: "Success", description: `Category "${trimmedName}" created` });
+      setShowAddNew(false);
+      setNewCategoryName("");
+      fetchCategories();
+    } catch (error) {
+      console.error("Error creating category:", error);
+      toast({ title: "Error", description: "Failed to create category", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -154,7 +194,54 @@ export const CategoryManagement = () => {
           <h2 className="text-xl font-semibold text-foreground">Category Management</h2>
           <p className="text-sm text-muted-foreground">{categories.length} categories total</p>
         </div>
+        <Button onClick={() => setShowAddNew(true)} className="gap-2">
+          <Plus className="w-4 h-4" />
+          Add Category
+        </Button>
       </div>
+
+      {/* Add New Category Form */}
+      {showAddNew && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Tag className="w-5 h-5 text-primary flex-shrink-0" />
+              <div className="flex-1">
+                <Label className="sr-only">New category name</Label>
+                <Input
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Enter category name"
+                  className="h-9"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAddCategory();
+                    if (e.key === "Escape") {
+                      setShowAddNew(false);
+                      setNewCategoryName("");
+                    }
+                  }}
+                />
+              </div>
+              <Button size="sm" onClick={handleAddCategory} disabled={saving} className="gap-1">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Create
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setShowAddNew(false);
+                  setNewCategoryName("");
+                }}
+                disabled={saving}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Categories List */}
       <div className="grid gap-3">
