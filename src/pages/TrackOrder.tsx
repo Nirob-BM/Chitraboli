@@ -198,6 +198,21 @@ const TrackOrder = () => {
 
   return (
     <Layout>
+      {/* About Chitraboli Section */}
+      <section className="py-12 bg-card border-b border-border/50">
+        <div className="container mx-auto px-4 text-center max-w-2xl">
+          <h2 className="font-display text-2xl md:text-3xl font-light text-foreground mb-2">
+            About <span className="text-gold">Chitraboli</span>
+          </h2>
+          <p className="font-display text-lg text-gold-light mb-4">চিত্রাবলী ✨</p>
+          <p className="text-muted-foreground leading-relaxed">
+            Chitraboli – চিত্রাবলী creates handmade jewellery inspired by art, tradition and passion. 
+            Every piece is crafted with love to make you shine. We believe that jewellery is not just 
+            an accessory, but a reflection of your unique personality and style.
+          </p>
+        </div>
+      </section>
+
       <div className="min-h-screen bg-background py-12">
         <div className="container mx-auto px-4 max-w-3xl">
           <div className="text-center mb-10">
