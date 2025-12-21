@@ -347,15 +347,15 @@ export const CollectionManagement = () => {
             <div className="space-y-2">
               <Label htmlFor="link_category">Link to Category</Label>
               <Select
-                value={formData.link_category}
-                onValueChange={(value) => setFormData({ ...formData, link_category: value })}
+                value={formData.link_category || "none"}
+                onValueChange={(value) => setFormData({ ...formData, link_category: value === "none" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a category (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
-                  {categories.map((cat) => (
+                  <SelectItem value="none">None</SelectItem>
+                  {categories.filter((cat) => cat && cat.trim() !== "").map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {cat}
                     </SelectItem>
