@@ -430,8 +430,10 @@ const TrackOrder = () => {
       </div>
 
       {/* About Chitraboli Section */}
-      <section className="py-12 bg-card border-t border-border/50">
-        <div className="container mx-auto px-4 text-center max-w-2xl">
+      <section className="py-16 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-gold/10 via-background to-gold-light/5" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-gold/20 via-transparent to-transparent opacity-50" />
+        <div className="container mx-auto px-4 text-center max-w-2xl relative z-10">
           <h2 className="font-display text-2xl md:text-3xl font-light text-foreground mb-2">
             About <span className="text-gold">Chitraboli</span>
           </h2>
