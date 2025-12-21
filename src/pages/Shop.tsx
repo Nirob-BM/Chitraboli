@@ -3,7 +3,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { useProducts } from "@/hooks/useProducts";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { CategoryFilterSkeleton, ProductGridSkeleton } from "@/components/PageSkeleton";
 
 const Shop = () => {
   const { products, loading, getCategories } = useProducts();
@@ -34,9 +34,10 @@ const Shop = () => {
       <section className="py-12 bg-background">
         <div className="container mx-auto px-4">
           {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 animate-spin text-gold" />
-            </div>
+            <>
+              <CategoryFilterSkeleton />
+              <ProductGridSkeleton count={8} />
+            </>
           ) : (
             <>
               {/* Category Filter */}
@@ -70,15 +71,20 @@ const Shop = () => {
 
               {/* Products Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {filteredProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    id={product.id}
-                    name={product.name}
-                    price={product.price}
-                    image={product.image_url || "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600"}
-                    category={product.category}
-                  />
+                {filteredProducts.map((product, index) => (
+                  <div 
+                    key={product.id} 
+                    className="animate-fade-in"
+                    style={{ animationDelay: `${index * 0.05}s` }}
+                  >
+                    <ProductCard
+                      id={product.id}
+                      name={product.name}
+                      price={product.price}
+                      image={product.image_url || "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600"}
+                      category={product.category}
+                    />
+                  </div>
                 ))}
               </div>
 
