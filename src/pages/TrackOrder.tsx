@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Package, Truck, CheckCircle, XCircle, Clock, AlertCircle, ShieldCheck, History } from "lucide-react";
+import { Search, Package, Truck, CheckCircle, XCircle, Clock, AlertCircle, ShieldCheck, History, ArrowRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface OrderItem {
@@ -435,11 +436,17 @@ const TrackOrder = () => {
             About <span className="text-gold">Chitraboli</span>
           </h2>
           <p className="font-display text-lg text-gold-light mb-4">চিত্রাবলী ✨</p>
-          <p className="text-muted-foreground leading-relaxed">
+          <p className="text-muted-foreground leading-relaxed mb-6">
             Chitraboli – চিত্রাবলী creates handmade jewellery inspired by art, tradition and passion. 
             Every piece is crafted with love to make you shine. We believe that jewellery is not just 
             an accessory, but a reflection of your unique personality and style.
           </p>
+          <Button variant="gold" size="lg" asChild>
+            <Link to="/about">
+              Learn More About Us
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
         </div>
       </section>
     </Layout>
