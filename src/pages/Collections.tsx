@@ -1,44 +1,44 @@
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
-import productRing from "@/assets/product-ring.jpg";
-import productNecklace from "@/assets/product-necklace.jpg";
-import productEarrings from "@/assets/product-earrings.jpg";
-import productBangles from "@/assets/product-bangles.jpg";
-
-const collections = [
-  {
-    name: "Rings Collection",
-    description: "Elegant rings for every occasion",
-    image: productRing,
-    link: "/shop?category=rings",
-    count: 12,
-  },
-  {
-    name: "Necklaces Collection",
-    description: "Statement pieces that captivate",
-    image: productNecklace,
-    link: "/shop?category=necklaces",
-    count: 18,
-  },
-  {
-    name: "Earrings Collection",
-    description: "From subtle to stunning",
-    image: productEarrings,
-    link: "/shop?category=earrings",
-    count: 24,
-  },
-  {
-    name: "Bangles Collection",
-    description: "Traditional meets modern",
-    image: productBangles,
-    link: "/shop?category=bangles",
-    count: 15,
-  },
-];
+import { ArrowRight, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const Collections = () => {
+  const { data: collections, isLoading } = useQuery({
+    queryKey: ['collections-public'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('collections')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Get product count for each collection category
+  const { data: productCounts } = useQuery({
+    queryKey: ['product-counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('category');
+      
+      if (error) throw error;
+      
+      const counts: Record<string, number> = {};
+      data.forEach(product => {
+        const cat = product.category.toLowerCase();
+        counts[cat] = (counts[cat] || 0) + 1;
+      });
+      return counts;
+    },
+  });
+
   return (
     <Layout>
       {/* Header */}
@@ -56,37 +56,62 @@ const Collections = () => {
       {/* Collections Grid */}
       <section className="py-12 bg-background">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {collections.map((collection, index) => (
-              <Link
-                key={collection.name}
-                to={collection.link}
-                className="group relative aspect-[4/3] overflow-hidden rounded-lg bg-card border border-border/50 hover:border-primary/30 transition-all duration-500 hover:shadow-gold"
-              >
-                <img
-                  src={collection.image}
-                  alt={collection.name}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-8">
-                  <p className="text-primary text-sm font-medium mb-2">
-                    {collection.count} Items
-                  </p>
-                  <h3 className="font-display text-2xl md:text-3xl font-medium text-foreground mb-2 group-hover:text-gold transition-colors">
-                    {collection.name}
-                  </h3>
-                  <p className="text-muted-foreground mb-4">
-                    {collection.description}
-                  </p>
-                  <div className="flex items-center text-primary group-hover:translate-x-2 transition-transform">
-                    <span className="font-medium text-sm">Explore Collection</span>
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : collections && collections.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {collections.map((collection) => {
+                const categoryLink = collection.link_category 
+                  ? `/shop?category=${collection.link_category.toLowerCase()}`
+                  : '/shop';
+                const itemCount = collection.link_category 
+                  ? productCounts?.[collection.link_category.toLowerCase()] || 0
+                  : 0;
+
+                return (
+                  <Link
+                    key={collection.id}
+                    to={categoryLink}
+                    className="group relative aspect-[4/3] overflow-hidden rounded-lg bg-card border border-border/50 hover:border-primary/30 transition-all duration-500 hover:shadow-gold"
+                  >
+                    {collection.image_url ? (
+                      <img
+                        src={collection.image_url}
+                        alt={collection.name}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-muted flex items-center justify-center">
+                        <span className="text-muted-foreground">No Image</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-8">
+                      <p className="text-primary text-sm font-medium mb-2">
+                        {itemCount} Items
+                      </p>
+                      <h3 className="font-display text-2xl md:text-3xl font-medium text-foreground mb-2 group-hover:text-gold transition-colors">
+                        {collection.name}
+                      </h3>
+                      <p className="text-muted-foreground mb-4">
+                        {collection.description}
+                      </p>
+                      <div className="flex items-center text-primary group-hover:translate-x-2 transition-transform">
+                        <span className="font-medium text-sm">Explore Collection</span>
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-20">
+              <p className="text-muted-foreground">No collections available yet.</p>
+            </div>
+          )}
         </div>
       </section>
 
