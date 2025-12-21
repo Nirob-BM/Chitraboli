@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit2, Trash2, Loader2, ImagePlus, Package } from "lucide-react";
+import { Plus, Edit2, Trash2, Loader2, ImagePlus, Package, PlusCircle } from "lucide-react";
 
 interface Product {
   id: string;
@@ -24,7 +24,7 @@ interface Product {
   created_at: string;
 }
 
-const CATEGORIES = ["Rings", "Necklaces", "Earrings", "Bangles", "Bracelets", "Anklets", "Sets"];
+const DEFAULT_CATEGORIES = ["Rings", "Necklaces", "Earrings", "Bangles", "Bracelets", "Anklets", "Sets"];
 
 export const ProductManagement = () => {
   const { toast } = useToast();
@@ -36,6 +36,13 @@ export const ProductManagement = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
+  const [customCategory, setCustomCategory] = useState("");
+
+  // Get unique categories from products + default categories
+  const allCategories = Array.from(
+    new Set([...DEFAULT_CATEGORIES, ...products.map((p) => p.category)])
+  ).sort();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -195,6 +202,8 @@ export const ProductManagement = () => {
     setEditingProduct(null);
     setImageFile(null);
     setImagePreview(null);
+    setShowCustomCategory(false);
+    setCustomCategory("");
     setFormData({
       name: "",
       price: "",
@@ -370,21 +379,61 @@ export const ProductManagement = () => {
             {/* Category */}
             <div className="space-y-2">
               <Label>Category *</Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {showCustomCategory ? (
+                <div className="flex gap-2">
+                  <Input
+                    value={customCategory}
+                    onChange={(e) => {
+                      setCustomCategory(e.target.value);
+                      setFormData({ ...formData, category: e.target.value });
+                    }}
+                    placeholder="Enter new category name"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setShowCustomCategory(false);
+                      setCustomCategory("");
+                      setFormData({ ...formData, category: allCategories[0] || "Rings" });
+                    }}
+                  >
+                    ×
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) => setFormData({ ...formData, category: value })}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allCategories.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowCustomCategory(true)}
+                    title="Add new category"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {showCustomCategory ? "Type a new category name" : "Click + to add a custom category"}
+              </p>
             </div>
 
             {/* Description */}
