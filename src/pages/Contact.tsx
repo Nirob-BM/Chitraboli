@@ -2,7 +2,7 @@ import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Facebook, Instagram, Mail, Phone, MapPin, Send, Loader2 } from "lucide-react";
+import { Facebook, Instagram, Mail, Phone, MapPin, Send, Loader2, MessageCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -128,6 +128,9 @@ const Contact = () => {
                   </a>
                   <a href="#" className="h-12 w-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                     <Instagram className="h-5 w-5" />
+                  </a>
+                  <a href="https://wa.me/8801308697630" target="_blank" rel="noopener noreferrer" className="h-12 w-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors">
+                    <MessageCircle className="h-5 w-5" />
                   </a>
                 </div>
               </div>
