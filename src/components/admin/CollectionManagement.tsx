@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Edit2, Trash2, FolderOpen, Plus, Image, GripVertical } from "lucide-react";
+import { Loader2, Edit2, Trash2, FolderOpen, Plus, Image, GripVertical, Upload, X } from "lucide-react";
 
 interface Collection {
   id: string;
@@ -51,6 +51,9 @@ export const CollectionManagement = () => {
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
   const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -109,6 +112,7 @@ export const CollectionManagement = () => {
       link_category: "",
       is_active: true,
     });
+    setImagePreview(null);
     setShowModal(true);
   };
 
@@ -121,7 +125,58 @@ export const CollectionManagement = () => {
       link_category: collection.link_category || "",
       is_active: collection.is_active,
     });
+    setImagePreview(collection.image_url || null);
     setShowModal(true);
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Error", description: "Please select an image file", variant: "destructive" });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Error", description: "Image must be less than 5MB", variant: "destructive" });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `collections/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("products")
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("products")
+        .getPublicUrl(fileName);
+
+      setFormData({ ...formData, image_url: publicUrl });
+      setImagePreview(publicUrl);
+      toast({ title: "Success", description: "Image uploaded" });
+    } catch (error: any) {
+      console.error("Error uploading image:", error);
+      toast({ title: "Error", description: "Failed to upload image", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = () => {
+    setFormData({ ...formData, image_url: "" });
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleSave = async () => {
@@ -335,13 +390,45 @@ export const CollectionManagement = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="image_url">Image URL</Label>
-              <Input
-                id="image_url"
-                value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                placeholder="https://example.com/image.jpg"
-              />
+              <Label>Collection Image</Label>
+              <div className="space-y-3">
+                {imagePreview ? (
+                  <div className="relative w-full h-40 rounded-lg overflow-hidden bg-muted">
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-8 w-8"
+                      onClick={removeImage}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-40 border-2 border-dashed border-muted-foreground/25 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
+                  >
+                    {uploading ? (
+                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground">Click to upload image</p>
+                        <p className="text-xs text-muted-foreground/70">Max 5MB</p>
+                      </>
+                    )}
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
