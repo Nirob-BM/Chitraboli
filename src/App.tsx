@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { BackToTop } from "@/components/BackToTop";
 
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
@@ -36,6 +37,7 @@ const AppContent = () => {
         <Route path="*" element={<NotFound />} />
       </Routes>
       <CartDrawer />
+      <BackToTop />
     </>
   );
 };
