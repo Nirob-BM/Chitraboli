@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { X, Send, Bot, User, Loader2, Sparkles, Globe, Mic, MicOff } from "lucide-react";
+import { X, Send, Bot, User, Loader2, Sparkles, Globe, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -52,9 +52,12 @@ export const AIAssistant = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const handleLanguageChange = (lang: Language) => {
     setLanguage(lang);
@@ -260,6 +263,70 @@ export const AIAssistant = () => {
     }
   };
 
+  const speakText = async (text: string, messageIndex: number) => {
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    // If clicking the same message that's speaking, stop it
+    if (speakingIndex === messageIndex && isSpeaking) {
+      setIsSpeaking(false);
+      setSpeakingIndex(null);
+      return;
+    }
+
+    try {
+      setIsSpeaking(true);
+      setSpeakingIndex(messageIndex);
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/text-to-speech`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
+        },
+        body: JSON.stringify({ text, language })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate speech');
+      }
+
+      const { audioContent, error } = await response.json();
+      
+      if (error) {
+        throw new Error(error);
+      }
+
+      // Play the audio using data URI
+      const audioUrl = `data:audio/mpeg;base64,${audioContent}`;
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        setIsSpeaking(false);
+        setSpeakingIndex(null);
+        audioRef.current = null;
+      };
+
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        setSpeakingIndex(null);
+        audioRef.current = null;
+        toast.error(language === "bn" ? "অডিও প্লে করতে সমস্যা" : language === "hi" ? "ऑडियो प्ले करने में समस्या" : "Failed to play audio");
+      };
+
+      await audio.play();
+    } catch (error) {
+      console.error('TTS error:', error);
+      setIsSpeaking(false);
+      setSpeakingIndex(null);
+      toast.error(language === "bn" ? "স্পিচ তৈরি করতে সমস্যা" : language === "hi" ? "स्पीच बनाने में समस्या" : "Failed to generate speech");
+    }
+  };
+
   return (
     <div className="relative">
       {/* Toggle Button - positioned within footer */}
@@ -359,11 +426,41 @@ export const AIAssistant = () => {
               )}>
                 {message.role === "assistant" ? <Bot className="w-3.5 h-3.5 text-white" /> : <User className="w-3.5 h-3.5 text-gold" />}
               </div>
-              <div className={cn(
-                "max-w-[80%] p-2.5 rounded-xl",
-                message.role === "assistant" ? "bg-muted/50 rounded-tl-sm" : "bg-gradient-to-r from-purple-accent/20 to-gold/20 rounded-tr-sm"
-              )}>
-                <p className="text-xs text-foreground whitespace-pre-wrap">{message.content}</p>
+              <div className="flex flex-col gap-1 max-w-[80%]">
+                <div className={cn(
+                  "p-2.5 rounded-xl",
+                  message.role === "assistant" ? "bg-muted/50 rounded-tl-sm" : "bg-gradient-to-r from-purple-accent/20 to-gold/20 rounded-tr-sm"
+                )}>
+                  <p className="text-xs text-foreground whitespace-pre-wrap">{message.content}</p>
+                </div>
+                {/* TTS button for assistant messages */}
+                {message.role === "assistant" && message.content && (
+                  <button
+                    onClick={() => speakText(message.content, index)}
+                    disabled={isLoading}
+                    className={cn(
+                      "self-start flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-all",
+                      speakingIndex === index && isSpeaking
+                        ? "bg-purple-accent/30 text-purple-accent"
+                        : "bg-muted/30 hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                    )}
+                    title={speakingIndex === index && isSpeaking 
+                      ? (language === "bn" ? "থামান" : language === "hi" ? "रोकें" : "Stop") 
+                      : (language === "bn" ? "শুনুন" : language === "hi" ? "सुनें" : "Listen")}
+                  >
+                    {speakingIndex === index && isSpeaking ? (
+                      <>
+                        <VolumeX className="w-3 h-3" />
+                        <span>{language === "bn" ? "থামান" : language === "hi" ? "रोकें" : "Stop"}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="w-3 h-3" />
+                        <span>{language === "bn" ? "শুনুন" : language === "hi" ? "सुनें" : "Listen"}</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           ))}
