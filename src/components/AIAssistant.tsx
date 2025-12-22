@@ -598,12 +598,14 @@ export const AIAssistant = () => {
             </div>
           ))}
           {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 animate-fade-in">
               <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-accent to-gold flex items-center justify-center">
                 <Bot className="w-3.5 h-3.5 text-white" />
               </div>
-              <div className="bg-muted/50 p-2.5 rounded-xl rounded-tl-sm">
-                <Loader2 className="w-4 h-4 animate-spin text-purple-accent" />
+              <div className="bg-muted/50 p-2.5 rounded-xl rounded-tl-sm flex items-center gap-1">
+                <span className="w-2 h-2 bg-purple-accent rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 bg-purple-accent rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 bg-purple-accent rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           )}
