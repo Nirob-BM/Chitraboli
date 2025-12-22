@@ -83,6 +83,8 @@ export const AIAssistant = () => {
   const audioChunksRef = useRef<Blob[]>([]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Cache TTS audio URLs by content hash to avoid repeated API calls
+  const ttsCache = useRef<Map<string, string>>(new Map());
 
   const handleLanguageChange = (lang: Language) => {
     setLanguage(lang);
@@ -109,6 +111,9 @@ export const AIAssistant = () => {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
+      // Revoke cached audio URLs
+      ttsCache.current.forEach((url) => URL.revokeObjectURL(url));
+      ttsCache.current.clear();
     };
   }, []);
 
@@ -347,6 +352,45 @@ export const AIAssistant = () => {
       return;
     }
 
+    // Create a cache key from text + language
+    const cacheKey = `${language}:${text}`;
+    const cachedUrl = ttsCache.current.get(cacheKey);
+
+    // Helper to play audio from a URL
+    const playFromUrl = (audioUrl: string, revokeOnEnd: boolean) => {
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        setIsSpeaking(false);
+        setSpeakingIndex(null);
+        audioRef.current = null;
+        if (revokeOnEnd) {
+          URL.revokeObjectURL(audioUrl);
+        }
+      };
+
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        setSpeakingIndex(null);
+        audioRef.current = null;
+        if (revokeOnEnd) {
+          URL.revokeObjectURL(audioUrl);
+        }
+        toast.error(language === "bn" ? "অডিও প্লে করতে সমস্যা" : language === "hi" ? "ऑडियो चलाने में समस्या" : "Failed to play audio");
+      };
+
+      audio.play();
+    };
+
+    // If cached, play directly
+    if (cachedUrl) {
+      setIsSpeaking(true);
+      setSpeakingIndex(messageIndex);
+      playFromUrl(cachedUrl, false);
+      return;
+    }
+
     try {
       setIsSpeaking(true);
       setSpeakingIndex(messageIndex);
@@ -401,25 +445,11 @@ export const AIAssistant = () => {
       // Audio success path (binary response)
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
 
-      audio.onended = () => {
-        setIsSpeaking(false);
-        setSpeakingIndex(null);
-        audioRef.current = null;
-        URL.revokeObjectURL(audioUrl);
-      };
+      // Cache the audio URL for future playback
+      ttsCache.current.set(cacheKey, audioUrl);
 
-      audio.onerror = () => {
-        setIsSpeaking(false);
-        setSpeakingIndex(null);
-        audioRef.current = null;
-        URL.revokeObjectURL(audioUrl);
-        toast.error(language === "bn" ? "অডিও প্লে করতে সমস্যা" : language === "hi" ? "ऑडियो चलाने में समस्या" : "Failed to play audio");
-      };
-
-      await audio.play();
+      playFromUrl(audioUrl, false);
     } catch (error) {
       console.error('TTS error:', error);
 
