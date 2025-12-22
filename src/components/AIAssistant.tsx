@@ -18,7 +18,8 @@ const languageConfig = {
     placeholder: "আপনার বার্তা লিখুন...",
     online: "অনলাইন",
     listening: "শুনছি...",
-    processing: "প্রক্রিয়াকরণ..."
+    processing: "প্রক্রিয়াকরণ...",
+    speaking: "বলছি..."
   },
   en: {
     name: "English",
@@ -27,7 +28,8 @@ const languageConfig = {
     placeholder: "Type your message...",
     online: "Online",
     listening: "Listening...",
-    processing: "Processing..."
+    processing: "Processing...",
+    speaking: "Speaking..."
   },
   hi: {
     name: "हिंदी",
@@ -36,8 +38,30 @@ const languageConfig = {
     placeholder: "अपना संदेश लिखें...",
     online: "ऑनलाइन",
     listening: "सुन रहा हूं...",
-    processing: "प्रोसेसिंग..."
+    processing: "प्रोसेसिंग...",
+    speaking: "बोल रहा हूं..."
   }
+};
+
+const quickReplies = {
+  bn: [
+    { label: "📦 পণ্য দেখুন", message: "আপনার জনপ্রিয় পণ্যগুলো দেখান" },
+    { label: "🔍 অর্ডার ট্র্যাক", message: "আমি আমার অর্ডার ট্র্যাক করতে চাই" },
+    { label: "📞 যোগাযোগ", message: "আপনাদের সাথে কিভাবে যোগাযোগ করব?" },
+    { label: "💳 পেমেন্ট", message: "কি কি পেমেন্ট অপশন আছে?" }
+  ],
+  en: [
+    { label: "📦 Show Products", message: "Show me your popular products" },
+    { label: "🔍 Track Order", message: "I want to track my order" },
+    { label: "📞 Contact Us", message: "How can I contact you?" },
+    { label: "💳 Payment", message: "What payment options do you have?" }
+  ],
+  hi: [
+    { label: "📦 उत्पाद देखें", message: "अपने लोकप्रिय उत्पाद दिखाएं" },
+    { label: "🔍 ऑर्डर ट्रैक", message: "मैं अपना ऑर्डर ट्रैक करना चाहता हूं" },
+    { label: "📞 संपर्क", message: "आपसे कैसे संपर्क करें?" },
+    { label: "💳 भुगतान", message: "आपके पास कौन से भुगतान विकल्प हैं?" }
+  ]
 };
 
 export const AIAssistant = () => {
@@ -57,6 +81,8 @@ export const AIAssistant = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const handleLanguageChange = (lang: Language) => {
     setLanguage(lang);
@@ -262,10 +288,11 @@ export const AIAssistant = () => {
     }
   };
 
-  const speakText = (text: string, messageIndex: number) => {
-    // Stop any currently speaking
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
+  const speakText = async (text: string, messageIndex: number) => {
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
     }
 
     // If clicking the same message that's speaking, stop it
@@ -279,32 +306,42 @@ export const AIAssistant = () => {
       setIsSpeaking(true);
       setSpeakingIndex(messageIndex);
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      
-      // Set language based on selection
-      if (language === 'bn') {
-        utterance.lang = 'bn-BD'; // Bengali
-      } else if (language === 'hi') {
-        utterance.lang = 'hi-IN'; // Hindi
-      } else {
-        utterance.lang = 'en-US'; // English
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
+        },
+        body: JSON.stringify({ text, language })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate speech');
       }
-      
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
 
-      utterance.onend = () => {
+      // Get audio as blob (binary response)
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.onended = () => {
         setIsSpeaking(false);
         setSpeakingIndex(null);
+        audioRef.current = null;
+        URL.revokeObjectURL(audioUrl);
       };
 
-      utterance.onerror = () => {
+      audio.onerror = () => {
         setIsSpeaking(false);
         setSpeakingIndex(null);
-        toast.error(language === "bn" ? "স্পিচ তৈরি করতে সমস্যা" : language === "hi" ? "स्पीच बनाने में समस्या" : "Speech not supported in this browser");
+        audioRef.current = null;
+        URL.revokeObjectURL(audioUrl);
+        toast.error(language === "bn" ? "অডিও প্লে করতে সমস্যা" : language === "hi" ? "ऑडियो चलाने में समस्या" : "Failed to play audio");
       };
 
-      window.speechSynthesis.speak(utterance);
+      await audio.play();
     } catch (error) {
       console.error('TTS error:', error);
       setIsSpeaking(false);
@@ -461,6 +498,21 @@ export const AIAssistant = () => {
             </div>
           )}
           <div ref={messagesEndRef} />
+          
+          {/* Quick Reply Buttons */}
+          {messages.length <= 2 && !isLoading && (
+            <div className="flex flex-wrap gap-1.5 pt-2">
+              {quickReplies[language].map((reply, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => sendMessage(reply.message)}
+                  className="px-2.5 py-1.5 text-xs bg-purple-accent/10 hover:bg-purple-accent/20 border border-purple-accent/30 rounded-full transition-colors text-foreground"
+                >
+                  {reply.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Input */}
