@@ -57,7 +57,6 @@ export const AIAssistant = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const handleLanguageChange = (lang: Language) => {
     setLanguage(lang);
@@ -263,11 +262,10 @@ export const AIAssistant = () => {
     }
   };
 
-  const speakText = async (text: string, messageIndex: number) => {
-    // Stop any currently playing audio
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
+  const speakText = (text: string, messageIndex: number) => {
+    // Stop any currently speaking
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
     }
 
     // If clicking the same message that's speaking, stop it
@@ -281,44 +279,32 @@ export const AIAssistant = () => {
       setIsSpeaking(true);
       setSpeakingIndex(messageIndex);
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/text-to-speech`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
-        },
-        body: JSON.stringify({ text, language })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate speech');
-      }
-
-      const { audioContent, error } = await response.json();
+      const utterance = new SpeechSynthesisUtterance(text);
       
-      if (error) {
-        throw new Error(error);
+      // Set language based on selection
+      if (language === 'bn') {
+        utterance.lang = 'bn-BD'; // Bengali
+      } else if (language === 'hi') {
+        utterance.lang = 'hi-IN'; // Hindi
+      } else {
+        utterance.lang = 'en-US'; // English
       }
+      
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
 
-      // Play the audio using data URI
-      const audioUrl = `data:audio/mpeg;base64,${audioContent}`;
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-
-      audio.onended = () => {
+      utterance.onend = () => {
         setIsSpeaking(false);
         setSpeakingIndex(null);
-        audioRef.current = null;
       };
 
-      audio.onerror = () => {
+      utterance.onerror = () => {
         setIsSpeaking(false);
         setSpeakingIndex(null);
-        audioRef.current = null;
-        toast.error(language === "bn" ? "অডিও প্লে করতে সমস্যা" : language === "hi" ? "ऑडियो प्ले करने में समस्या" : "Failed to play audio");
+        toast.error(language === "bn" ? "স্পিচ তৈরি করতে সমস্যা" : language === "hi" ? "स्पीच बनाने में समस्या" : "Speech not supported in this browser");
       };
 
-      await audio.play();
+      window.speechSynthesis.speak(utterance);
     } catch (error) {
       console.error('TTS error:', error);
       setIsSpeaking(false);
