@@ -64,10 +64,12 @@ serve(async (req) => {
       const message = (errJson?.detail?.message || errJson?.message || 'Failed to generate speech') as string;
 
       // ElevenLabs may disable Free Tier due to unusual activity.
-      // Return a distinct status so the client can gracefully fall back.
-      const status = code === 'detected_unusual_activity' ? 402 : response.status;
+      // IMPORTANT: Return HTTP 200 for this specific case so the frontend can fall back
+      // without Lovable treating it as a fatal runtime/network error.
+      const isUnusualActivity = code === 'detected_unusual_activity';
+      const status = isUnusualActivity ? 200 : response.status;
 
-      return new Response(JSON.stringify({ error: message, code }), {
+      return new Response(JSON.stringify({ error: message, code, blocked: isUnusualActivity }), {
         status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

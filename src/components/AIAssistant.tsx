@@ -360,8 +360,10 @@ export const AIAssistant = () => {
         body: JSON.stringify({ text, language })
       });
 
-      if (!response.ok) {
-        // Try to parse JSON error, but don't assume it.
+      const contentType = response.headers.get('content-type') || '';
+
+      // ElevenLabs may return JSON (even with HTTP 200) when Free Tier is blocked.
+      if (contentType.includes('application/json')) {
         let err: any = null;
         try {
           err = await response.json();
@@ -370,10 +372,10 @@ export const AIAssistant = () => {
         }
 
         const msg = (err?.error as string | undefined) || (language === "bn" ? "ভয়েস সার্ভিস সাময়িকভাবে উপলব্ধ নয়" : language === "hi" ? "वॉयस सेवा अभी उपलब्ध नहीं है" : "Voice service is temporarily unavailable");
+        const code = err?.code as string | undefined;
 
-        // Specific handling for ElevenLabs free-tier blocks
         const isUnusualActivity =
-          (err?.code === 'detected_unusual_activity') ||
+          code === 'detected_unusual_activity' ||
           (typeof msg === 'string' && msg.toLowerCase().includes('unusual activity'));
 
         if (isUnusualActivity) {
@@ -385,7 +387,6 @@ export const AIAssistant = () => {
               : "ElevenLabs Free Tier is blocked (VPN/plan). Using basic voice instead."
           );
 
-          // Fallback: Browser TTS
           speakWithBrowserTTS(text);
           return;
         }
@@ -393,7 +394,11 @@ export const AIAssistant = () => {
         throw new Error(msg);
       }
 
-      // Get audio as blob (binary response)
+      if (!response.ok) {
+        throw new Error(language === "bn" ? "ভয়েস সার্ভিস সাময়িকভাবে উপলব্ধ নয়" : language === "hi" ? "वॉयस सेवा अभी उपलब्ध नहीं है" : "Voice service is temporarily unavailable");
+      }
+
+      // Audio success path (binary response)
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
