@@ -26,23 +26,36 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
             <Link to="/" className="flex flex-col items-start mb-4">
-              <span className="font-display text-3xl font-semibold text-gold tracking-wide">
-                Chitraboli
-              </span>
+              <span className="font-display text-3xl font-semibold text-gold tracking-wide">Chitraboli</span>
               <span className="font-display text-lg text-gold-light opacity-80">চিত্রাবলী ✨</span>
             </Link>
             <p className="text-muted-foreground font-body text-sm leading-relaxed max-w-md">
-              Handmade with Love, Crafted with Passion. Every piece of Chitraboli jewellery is inspired by art, 
+              Handmade with Love, Crafted with Passion. Every piece of Chitraboli jewellery is inspired by art,
               tradition, and passion. We create unique pieces to make you shine.
             </p>
             <div className="flex gap-4 mt-6">
-              <a href="https://www.facebook.com/chitraboli1" target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+              <a
+                href="https://www.facebook.com/chitraboli1"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+              >
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href="https://instagram.com/chitraboli.shop/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+              <a
+                href="https://instagram.com/chitraboli.shop/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+              >
                 <Instagram className="h-5 w-5" />
               </a>
-              <a href="https://wa.me/8801308697630" target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors">
+              <a
+                href="https://wa.me/8801308697630"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors"
+              >
                 <MessageCircle className="h-5 w-5" />
               </a>
             </div>
@@ -50,9 +63,7 @@ export function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-display text-lg font-semibold text-foreground mb-4">
-              Quick Links
-            </h4>
+            <h4 className="font-display text-lg font-semibold text-foreground mb-4">Quick Links</h4>
             <ul className="space-y-3">
               {[
                 { label: "Shop", path: "/shop" },
@@ -62,10 +73,7 @@ export function Footer() {
                 { label: "Track Order", path: "/track-order" },
               ].map((item) => (
                 <li key={item.label}>
-                  <Link
-                    to={item.path}
-                    className="text-muted-foreground text-sm hover:text-primary transition-colors"
-                  >
+                  <Link to={item.path} className="text-muted-foreground text-sm hover:text-primary transition-colors">
                     {item.label}
                   </Link>
                 </li>
@@ -75,13 +83,11 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h4 className="font-display text-lg font-semibold text-foreground mb-4">
-              Contact Us
-            </h4>
+            <h4 className="font-display text-lg font-semibold text-foreground mb-4">Contact Us</h4>
             <ul className="space-y-3">
               <li className="flex items-center gap-3 text-muted-foreground text-sm">
                 <Phone className="h-4 w-4 text-primary" />
-                <span>+880 1308697630</span>
+                <span>+880 1308-697630</span>
               </li>
               <li className="flex items-center gap-3 text-muted-foreground text-sm">
                 <Mail className="h-4 w-4 text-primary" />
@@ -97,9 +103,9 @@ export function Footer() {
 
         <div className="border-t border-border mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-muted-foreground text-sm">
-            © {new Date().getFullYear()} Chitraboli চিত্রাবলী. All rights reserved.
+            © {new Date().getFullYear()} Chitraboli - চিত্রাবলী. All rights reserved.
           </p>
-          
+
           {/* AI Assistant embedded in footer */}
           <AIAssistant />
         </div>
