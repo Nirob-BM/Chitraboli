@@ -8,6 +8,7 @@ import { CartProvider } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { BackToTop } from "@/components/BackToTop";
+import { AdSense } from "@/components/AdSense";
 
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
@@ -21,9 +22,13 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// AdSense Publisher ID from environment/secrets
+const ADSENSE_PUBLISHER_ID = import.meta.env.VITE_ADSENSE_PUBLISHER_ID || "";
+
 const AppContent = () => {
   return (
     <>
+      <AdSense publisherId={ADSENSE_PUBLISHER_ID} />
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<Index />} />
