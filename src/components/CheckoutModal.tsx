@@ -95,6 +95,24 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
         });
         const encodedMessage = encodeURIComponent(message);
         setWhatsappUrl(`https://wa.me/8801308697630?text=${encodedMessage}`);
+
+        // Send SMS notification
+        try {
+          const paymentMethodLabel = paymentMethod === "cod" ? "Cash on Delivery" : paymentMethod === "bkash" ? "bKash" : "Nagad";
+          await supabase.functions.invoke("send-order-sms", {
+            body: {
+              to: formData.phone,
+              orderId: orderData.id,
+              customerName: formData.name,
+              totalAmount: totalPrice,
+              paymentMethod: paymentMethodLabel,
+            },
+          });
+          console.log("SMS notification sent successfully");
+        } catch (smsError) {
+          console.error("Failed to send SMS notification:", smsError);
+          // Don't block order completion if SMS fails
+        }
       }
 
       setOrderPlaced(true);
@@ -102,7 +120,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
       
       toast({
         title: "Order Placed Successfully!",
-        description: "We'll contact you shortly to confirm your order.",
+        description: "We'll contact you shortly. Check your SMS for confirmation.",
       });
 
       // Don't auto-close, let user click WhatsApp button or close manually
