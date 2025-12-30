@@ -12,7 +12,7 @@ import { CheckCircle, Loader2, MessageCircle, Banknote, Copy } from "lucide-reac
 import { formatOrderForWhatsApp } from "@/utils/orderNotification";
 import { z } from "zod";
 import bkashLogo from "@/assets/bkash-logo.png";
-import nagadLogo from "@/assets/nagad-logo.png";
+import nagadLogo from "@/assets/nagad-logo-official.svg";
 
 // Zod schema for order item validation
 const OrderItemSchema = z.object({
