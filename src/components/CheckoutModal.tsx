@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ import { formatOrderForWhatsApp } from "@/utils/orderNotification";
 import { z } from "zod";
 import bkashLogo from "@/assets/bkash-logo.png";
 import nagadLogo from "@/assets/nagad-logo.svg";
+
+const CHECKOUT_STORAGE_KEY = "chitraboli-checkout-progress";
 
 // Zod schemas for validation
 const OrderItemSchema = z.object({
@@ -32,6 +34,14 @@ const CustomerDetailsSchema = z.object({
   address: z.string().min(10, "Please enter a complete address").max(500, "Address is too long"),
 });
 
+interface CheckoutProgress {
+  formData: { name: string; email: string; phone: string; address: string };
+  paymentMethod: "cod" | "bkash" | "nagad";
+  transactionId: string;
+  currentStep: number;
+  savedAt: number;
+}
+
 interface CheckoutModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,6 +54,8 @@ const STEPS = [
   { label: "Payment", icon: CreditCard },
   { label: "Confirm", icon: ClipboardCheck },
 ];
+
+const PROGRESS_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
 
 export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
   const { items, totalPrice, clearCart } = useCart();
@@ -61,8 +73,65 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "nagad">("cod");
   const [transactionId, setTransactionId] = useState("");
   const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
+  const [hasRestoredProgress, setHasRestoredProgress] = useState(false);
 
   const PAYMENT_NUMBER = "01308697630";
+
+  // Load saved progress on mount
+  useEffect(() => {
+    if (open && !hasRestoredProgress) {
+      try {
+        const saved = localStorage.getItem(CHECKOUT_STORAGE_KEY);
+        if (saved) {
+          const progress: CheckoutProgress = JSON.parse(saved);
+          const isExpired = Date.now() - progress.savedAt > PROGRESS_EXPIRY_MS;
+          
+          if (!isExpired) {
+            setFormData(progress.formData);
+            setPaymentMethod(progress.paymentMethod);
+            setTransactionId(progress.transactionId);
+            setCurrentStep(progress.currentStep as Step);
+            toast({
+              title: "Progress restored",
+              description: "Your checkout progress has been restored.",
+            });
+          } else {
+            localStorage.removeItem(CHECKOUT_STORAGE_KEY);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to restore checkout progress:", e);
+        localStorage.removeItem(CHECKOUT_STORAGE_KEY);
+      }
+      setHasRestoredProgress(true);
+    }
+  }, [open, hasRestoredProgress, toast]);
+
+  // Save progress whenever form data changes
+  const saveProgress = useCallback(() => {
+    const progress: CheckoutProgress = {
+      formData,
+      paymentMethod,
+      transactionId,
+      currentStep,
+      savedAt: Date.now(),
+    };
+    try {
+      localStorage.setItem(CHECKOUT_STORAGE_KEY, JSON.stringify(progress));
+    } catch (e) {
+      console.error("Failed to save checkout progress:", e);
+    }
+  }, [formData, paymentMethod, transactionId, currentStep]);
+
+  useEffect(() => {
+    if (open && hasRestoredProgress && !orderPlaced) {
+      saveProgress();
+    }
+  }, [open, formData, paymentMethod, transactionId, currentStep, hasRestoredProgress, orderPlaced, saveProgress]);
+
+  const clearProgress = useCallback(() => {
+    localStorage.removeItem(CHECKOUT_STORAGE_KEY);
+  }, []);
 
   // Validate current step
   const validateStep = (step: Step): boolean => {
@@ -169,6 +238,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
 
       setOrderPlaced(true);
       clearCart();
+      clearProgress();
       
       toast({
         title: "Order Placed Successfully!",
@@ -195,6 +265,8 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
     setFormData({ name: "", email: "", phone: "", address: "" });
     setCurrentStep(0);
     setFieldErrors({});
+    setHasRestoredProgress(false);
+    clearProgress();
   };
 
   const copyToClipboard = (text: string) => {
