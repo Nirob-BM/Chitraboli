@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,13 +8,13 @@ import { Label } from "@/components/ui/label";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Loader2, MessageCircle, Banknote, Copy } from "lucide-react";
+import { CheckCircle, Loader2, MessageCircle, Banknote, Copy, ChevronLeft, ChevronRight, User, CreditCard, ClipboardCheck } from "lucide-react";
 import { formatOrderForWhatsApp } from "@/utils/orderNotification";
 import { z } from "zod";
 import bkashLogo from "@/assets/bkash-logo.png";
 import nagadLogo from "@/assets/nagad-logo.svg";
 
-// Zod schema for order item validation
+// Zod schemas for validation
 const OrderItemSchema = z.object({
   product_id: z.string().min(1),
   product_name: z.string().min(1).max(200),
@@ -25,14 +25,30 @@ const OrderItemSchema = z.object({
 
 const OrderItemsSchema = z.array(OrderItemSchema).min(1);
 
+const CustomerDetailsSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
+  email: z.string().email("Please enter a valid email address"),
+  phone: z.string().min(10, "Phone number must be at least 10 digits").max(15, "Phone number is too long"),
+  address: z.string().min(10, "Please enter a complete address").max(500, "Address is too long"),
+});
+
 interface CheckoutModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+type Step = 0 | 1 | 2;
+
+const STEPS = [
+  { label: "Details", icon: User },
+  { label: "Payment", icon: CreditCard },
+  { label: "Confirm", icon: ClipboardCheck },
+];
+
 export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
   const { items, totalPrice, clearCart } = useCart();
   const { toast } = useToast();
+  const [currentStep, setCurrentStep] = useState<Step>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [formData, setFormData] = useState({
@@ -41,20 +57,60 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
     phone: "",
     address: "",
   });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "nagad">("cod");
   const [transactionId, setTransactionId] = useState("");
   const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
 
   const PAYMENT_NUMBER = "01308697630";
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Validate current step
+  const validateStep = (step: Step): boolean => {
+    if (step === 0) {
+      const result = CustomerDetailsSchema.safeParse(formData);
+      if (!result.success) {
+        const errors: Record<string, string> = {};
+        result.error.errors.forEach((err) => {
+          if (err.path[0]) {
+            errors[err.path[0] as string] = err.message;
+          }
+        });
+        setFieldErrors(errors);
+        return false;
+      }
+      setFieldErrors({});
+      return true;
+    }
+    if (step === 1) {
+      if ((paymentMethod === "bkash" || paymentMethod === "nagad") && !transactionId.trim()) {
+        setFieldErrors({ transactionId: "Transaction ID is required for mobile banking" });
+        return false;
+      }
+      setFieldErrors({});
+      return true;
+    }
+    return true;
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep((prev) => Math.min(prev + 1, 2) as Step);
+    }
+  };
+
+  const handleBack = () => {
+    setCurrentStep((prev) => Math.max(prev - 1, 0) as Step);
+    setFieldErrors({});
+  };
+
+  const handleSubmit = async () => {
+    if (!validateStep(1)) return;
+    
     setIsSubmitting(true);
 
     try {
       const sessionId = localStorage.getItem("chitraboli-session") || "";
       
-      // Validate and sanitize order items
       const validatedItems = OrderItemsSchema.parse(items.map(item => ({
         product_id: item.product_id,
         product_name: item.product_name,
@@ -78,7 +134,6 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
 
       if (error) throw error;
 
-      // Generate WhatsApp URL for user to click (not auto-open which gets blocked)
       if (orderData) {
         const message = formatOrderForWhatsApp({
           orderId: orderData.id,
@@ -96,7 +151,6 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
         const encodedMessage = encodeURIComponent(message);
         setWhatsappUrl(`https://wa.me/8801308697630?text=${encodedMessage}`);
 
-        // Send SMS notification
         try {
           const paymentMethodLabel = paymentMethod === "cod" ? "Cash on Delivery" : paymentMethod === "bkash" ? "bKash" : "Nagad";
           await supabase.functions.invoke("send-order-sms", {
@@ -108,10 +162,8 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
               paymentMethod: paymentMethodLabel,
             },
           });
-          console.log("SMS notification sent successfully");
         } catch (smsError) {
           console.error("Failed to send SMS notification:", smsError);
-          // Don't block order completion if SMS fails
         }
       }
 
@@ -122,8 +174,6 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
         title: "Order Placed Successfully!",
         description: "We'll contact you shortly. Check your SMS for confirmation.",
       });
-
-      // Don't auto-close, let user click WhatsApp button or close manually
     } catch (error) {
       console.error("Order error:", error);
       toast({
@@ -143,6 +193,8 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
     setTransactionId("");
     setPaymentMethod("cod");
     setFormData({ name: "", email: "", phone: "", address: "" });
+    setCurrentStep(0);
+    setFieldErrors({});
   };
 
   const copyToClipboard = (text: string) => {
@@ -153,6 +205,15 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
     });
   };
 
+  const paymentMethodLabel = useMemo(() => {
+    switch (paymentMethod) {
+      case "bkash": return "bKash";
+      case "nagad": return "Nagad";
+      default: return "Cash on Delivery";
+    }
+  }, [paymentMethod]);
+
+  // Order success view
   if (orderPlaced) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
@@ -191,198 +252,353 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-gold/20 max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="font-display text-2xl text-foreground">Checkout</DialogTitle>
-          <DialogDescription>Fill in your details to complete your order</DialogDescription>
+      <DialogContent className="bg-card border-gold/20 max-w-lg max-h-[90vh] overflow-y-auto p-0">
+        <DialogHeader className="p-4 pb-0 sm:p-6 sm:pb-0">
+          <DialogTitle className="font-display text-xl sm:text-2xl text-foreground">Checkout</DialogTitle>
+          <DialogDescription className="text-sm">Complete your order in 3 easy steps</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">Full Name *</label>
-            <Input
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="bg-background border-gold/20 focus:border-gold"
-              placeholder="Enter your full name"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">Email *</label>
-            <Input
-              required
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="bg-background border-gold/20 focus:border-gold"
-              placeholder="Enter your email"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">Phone Number *</label>
-            <Input
-              required
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="bg-background border-gold/20 focus:border-gold"
-              placeholder="Enter your phone number"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">Delivery Address *</label>
-            <Textarea
-              required
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="bg-background border-gold/20 focus:border-gold min-h-[100px]"
-              placeholder="Enter your full delivery address"
-            />
-          </div>
-
-          {/* Payment Method Selection */}
-          <div className="border-t border-gold/20 pt-4">
-            <label className="text-sm text-muted-foreground mb-3 block">Payment Method *</label>
-            <RadioGroup
-              value={paymentMethod}
-              onValueChange={(value) => setPaymentMethod(value as "cod" | "bkash" | "nagad")}
-              className="space-y-3"
-            >
-              {/* Cash on Delivery */}
-              <div className="flex items-center space-x-3 p-3 rounded-lg border border-gold/20 hover:border-gold/40 transition-colors">
-                <RadioGroupItem value="cod" id="cod" />
-                <Label htmlFor="cod" className="flex items-center gap-3 cursor-pointer flex-1">
-                  <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <Banknote className="w-6 h-6 text-green-600" />
+        {/* Stepper */}
+        <div className="px-4 sm:px-6 pt-4">
+          <div className="flex items-center justify-between mb-6">
+            {STEPS.map((step, index) => {
+              const StepIcon = step.icon;
+              const isActive = index === currentStep;
+              const isCompleted = index < currentStep;
+              
+              return (
+                <div key={step.label} className="flex items-center flex-1">
+                  <div className="flex flex-col items-center">
+                    <div
+                      className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+                        isCompleted
+                          ? "bg-green-500 text-white"
+                          : isActive
+                          ? "bg-gold text-background"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {isCompleted ? (
+                        <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+                      ) : (
+                        <StepIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                      )}
+                    </div>
+                    <span
+                      className={`text-xs sm:text-sm mt-1.5 font-medium transition-colors ${
+                        isActive ? "text-gold" : isCompleted ? "text-green-500" : "text-muted-foreground"
+                      }`}
+                    >
+                      {step.label}
+                    </span>
                   </div>
-                  <span className="font-medium">Cash on Delivery</span>
-                </Label>
+                  {index < STEPS.length - 1 && (
+                    <div
+                      className={`flex-1 h-0.5 mx-2 sm:mx-3 transition-colors ${
+                        index < currentStep ? "bg-green-500" : "bg-muted"
+                      }`}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="px-4 pb-4 sm:px-6 sm:pb-6">
+          {/* Step 1: Customer Details */}
+          {currentStep === 0 && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Full Name *</label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => {
+                    setFormData({ ...formData, name: e.target.value });
+                    if (fieldErrors.name) setFieldErrors({ ...fieldErrors, name: "" });
+                  }}
+                  className={`bg-background border-gold/20 focus:border-gold ${fieldErrors.name ? "border-destructive" : ""}`}
+                  placeholder="Enter your full name"
+                />
+                {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
               </div>
 
-              {/* bKash */}
-              <div className="flex items-center space-x-3 p-3 rounded-lg border border-gold/20 hover:border-gold/40 transition-colors">
-                <RadioGroupItem value="bkash" id="bkash" />
-                <Label htmlFor="bkash" className="flex items-center gap-3 cursor-pointer flex-1">
-                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#E2136E] flex items-center justify-center p-1">
-                    <img src={bkashLogo} alt="bKash" className="w-full h-full object-contain" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-medium text-[#E2136E]">bKash</span>
-                    <span className="text-xs text-muted-foreground">Mobile Banking</span>
-                  </div>
-                </Label>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Email *</label>
+                <Input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => {
+                    setFormData({ ...formData, email: e.target.value });
+                    if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: "" });
+                  }}
+                  className={`bg-background border-gold/20 focus:border-gold ${fieldErrors.email ? "border-destructive" : ""}`}
+                  placeholder="Enter your email"
+                />
+                {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
               </div>
 
-              {/* Nagad */}
-              <div className="flex items-center space-x-3 p-3 rounded-lg border border-gold/20 hover:border-gold/40 transition-colors">
-                <RadioGroupItem value="nagad" id="nagad" />
-                <Label htmlFor="nagad" className="flex items-center gap-3 cursor-pointer flex-1">
-                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center p-1">
-                    <img src={nagadLogo} alt="Nagad" className="w-full h-full object-contain" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-medium text-[#F6921E]">Nagad</span>
-                    <span className="text-xs text-muted-foreground">Digital Banking</span>
-                  </div>
-                </Label>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Phone Number *</label>
+                <Input
+                  value={formData.phone}
+                  onChange={(e) => {
+                    setFormData({ ...formData, phone: e.target.value });
+                    if (fieldErrors.phone) setFieldErrors({ ...fieldErrors, phone: "" });
+                  }}
+                  className={`bg-background border-gold/20 focus:border-gold ${fieldErrors.phone ? "border-destructive" : ""}`}
+                  placeholder="01XXXXXXXXX"
+                />
+                {fieldErrors.phone && <p className="text-xs text-destructive">{fieldErrors.phone}</p>}
               </div>
-            </RadioGroup>
 
-            {/* Mobile Banking Instructions */}
-            {(paymentMethod === "bkash" || paymentMethod === "nagad") && (
-              <div className={`mt-4 p-4 rounded-lg border ${
-                paymentMethod === "bkash" 
-                  ? "bg-[#E2136E]/5 border-[#E2136E]/20" 
-                  : "bg-[#F6921E]/5 border-[#F6921E]/20"
-              }`}>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden p-1 ${
-                    paymentMethod === "bkash" ? "bg-[#E2136E]" : "bg-white"
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Delivery Address *</label>
+                <Textarea
+                  value={formData.address}
+                  onChange={(e) => {
+                    setFormData({ ...formData, address: e.target.value });
+                    if (fieldErrors.address) setFieldErrors({ ...fieldErrors, address: "" });
+                  }}
+                  className={`bg-background border-gold/20 focus:border-gold min-h-[80px] ${fieldErrors.address ? "border-destructive" : ""}`}
+                  placeholder="House, Street, Area, City"
+                />
+                {fieldErrors.address && <p className="text-xs text-destructive">{fieldErrors.address}</p>}
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Payment Method */}
+          {currentStep === 1 && (
+            <div className="space-y-4 animate-fade-in">
+              <RadioGroup
+                value={paymentMethod}
+                onValueChange={(value) => {
+                  setPaymentMethod(value as "cod" | "bkash" | "nagad");
+                  setFieldErrors({});
+                }}
+                className="space-y-3"
+              >
+                {/* Cash on Delivery */}
+                <div className={`flex items-center space-x-3 p-3 rounded-lg border transition-all ${
+                  paymentMethod === "cod" ? "border-gold bg-gold/5" : "border-gold/20 hover:border-gold/40"
+                }`}>
+                  <RadioGroupItem value="cod" id="cod" />
+                  <Label htmlFor="cod" className="flex items-center gap-3 cursor-pointer flex-1">
+                    <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                      <Banknote className="w-6 h-6 text-green-600" />
+                    </div>
+                    <span className="font-medium">Cash on Delivery</span>
+                  </Label>
+                </div>
+
+                {/* bKash */}
+                <div className={`flex items-center space-x-3 p-3 rounded-lg border transition-all ${
+                  paymentMethod === "bkash" ? "border-[#E2136E] bg-[#E2136E]/5" : "border-gold/20 hover:border-gold/40"
+                }`}>
+                  <RadioGroupItem value="bkash" id="bkash" />
+                  <Label htmlFor="bkash" className="flex items-center gap-3 cursor-pointer flex-1">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#E2136E] flex items-center justify-center p-1">
+                      <img src={bkashLogo} alt="bKash" className="w-full h-full object-contain" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-[#E2136E]">bKash</span>
+                      <span className="text-xs text-muted-foreground">Mobile Banking</span>
+                    </div>
+                  </Label>
+                </div>
+
+                {/* Nagad */}
+                <div className={`flex items-center space-x-3 p-3 rounded-lg border transition-all ${
+                  paymentMethod === "nagad" ? "border-[#F6921E] bg-[#F6921E]/5" : "border-gold/20 hover:border-gold/40"
+                }`}>
+                  <RadioGroupItem value="nagad" id="nagad" />
+                  <Label htmlFor="nagad" className="flex items-center gap-3 cursor-pointer flex-1">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center p-1">
+                      <img src={nagadLogo} alt="Nagad" className="w-full h-full object-contain" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-[#F6921E]">Nagad</span>
+                      <span className="text-xs text-muted-foreground">Digital Banking</span>
+                    </div>
+                  </Label>
+                </div>
+              </RadioGroup>
+
+              {/* Mobile Banking Instructions */}
+              {(paymentMethod === "bkash" || paymentMethod === "nagad") && (
+                <div className={`p-4 rounded-lg border ${
+                  paymentMethod === "bkash" 
+                    ? "bg-[#E2136E]/5 border-[#E2136E]/20" 
+                    : "bg-[#F6921E]/5 border-[#F6921E]/20"
+                }`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden p-1 ${
+                      paymentMethod === "bkash" ? "bg-[#E2136E]" : "bg-white"
+                    }`}>
+                      <img 
+                        src={paymentMethod === "bkash" ? bkashLogo : nagadLogo} 
+                        alt={paymentMethod === "bkash" ? "bKash" : "Nagad"} 
+                        className="w-full h-full object-contain" 
+                      />
+                    </div>
+                    <span className={`font-semibold ${
+                      paymentMethod === "bkash" ? "text-[#E2136E]" : "text-[#F6921E]"
+                    }`}>
+                      {paymentMethod === "bkash" ? "bKash" : "Nagad"} Payment
+                    </span>
+                  </div>
+                  
+                  <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside mb-4">
+                    <li>Open your {paymentMethod === "bkash" ? "bKash" : "Nagad"} app</li>
+                    <li>Select <strong>"Send Money"</strong></li>
+                    <li>Send <strong className={paymentMethod === "bkash" ? "text-[#E2136E]" : "text-[#F6921E]"}>৳{totalPrice.toLocaleString()}</strong> to:</li>
+                  </ol>
+
+                  <div className={`flex items-center gap-2 p-3 rounded-lg border ${
+                    paymentMethod === "bkash" 
+                      ? "bg-[#E2136E]/10 border-[#E2136E]/30" 
+                      : "bg-[#F6921E]/10 border-[#F6921E]/30"
                   }`}>
+                    <span className={`font-mono font-bold text-lg flex-1 ${
+                      paymentMethod === "bkash" ? "text-[#E2136E]" : "text-[#F6921E]"
+                    }`}>
+                      {PAYMENT_NUMBER}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(PAYMENT_NUMBER)}
+                      className="h-8 px-3 hover:bg-background/50"
+                    >
+                      <Copy className="w-4 h-4 mr-1" />
+                      Copy
+                    </Button>
+                  </div>
+
+                  <div className="mt-4 space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">Transaction ID *</label>
+                    <Input
+                      value={transactionId}
+                      onChange={(e) => {
+                        setTransactionId(e.target.value);
+                        if (fieldErrors.transactionId) setFieldErrors({});
+                      }}
+                      className={`bg-background ${
+                        paymentMethod === "bkash" 
+                          ? "border-[#E2136E]/30 focus:border-[#E2136E]" 
+                          : "border-[#F6921E]/30 focus:border-[#F6921E]"
+                      } ${fieldErrors.transactionId ? "border-destructive" : ""}`}
+                      placeholder="e.g., TXN123456789"
+                    />
+                    {fieldErrors.transactionId && <p className="text-xs text-destructive">{fieldErrors.transactionId}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 3: Order Summary / Confirm */}
+          {currentStep === 2 && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                <h3 className="font-semibold text-foreground">Customer Details</h3>
+                <div className="text-sm space-y-1">
+                  <p><span className="text-muted-foreground">Name:</span> {formData.name}</p>
+                  <p><span className="text-muted-foreground">Email:</span> {formData.email}</p>
+                  <p><span className="text-muted-foreground">Phone:</span> {formData.phone}</p>
+                  <p><span className="text-muted-foreground">Address:</span> {formData.address}</p>
+                </div>
+              </div>
+
+              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                <h3 className="font-semibold text-foreground">Payment Method</h3>
+                <div className="flex items-center gap-2">
+                  {paymentMethod === "cod" ? (
+                    <Banknote className="w-5 h-5 text-green-600" />
+                  ) : (
                     <img 
                       src={paymentMethod === "bkash" ? bkashLogo : nagadLogo} 
-                      alt={paymentMethod === "bkash" ? "bKash" : "Nagad"} 
-                      className="w-full h-full object-contain" 
+                      alt={paymentMethodLabel}
+                      className="w-6 h-6 object-contain"
                     />
-                  </div>
-                  <span className={`font-semibold ${
-                    paymentMethod === "bkash" ? "text-[#E2136E]" : "text-[#F6921E]"
+                  )}
+                  <span className={`font-medium ${
+                    paymentMethod === "bkash" ? "text-[#E2136E]" : 
+                    paymentMethod === "nagad" ? "text-[#F6921E]" : "text-green-600"
                   }`}>
-                    {paymentMethod === "bkash" ? "bKash" : "Nagad"} Payment
+                    {paymentMethodLabel}
                   </span>
                 </div>
-                
-                <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside mb-4">
-                  <li>Open your {paymentMethod === "bkash" ? "bKash" : "Nagad"} app</li>
-                  <li>Select <strong>"Send Money"</strong></li>
-                  <li>Send <strong className={paymentMethod === "bkash" ? "text-[#E2136E]" : "text-[#F6921E]"}>৳{totalPrice.toLocaleString()}</strong> to the number below</li>
-                  <li>Enter the Transaction ID after payment</li>
-                </ol>
+                {transactionId && (
+                  <p className="text-sm"><span className="text-muted-foreground">Transaction ID:</span> {transactionId}</p>
+                )}
+              </div>
 
-                <div className={`flex items-center gap-2 p-3 rounded-lg border ${
-                  paymentMethod === "bkash" 
-                    ? "bg-[#E2136E]/10 border-[#E2136E]/30" 
-                    : "bg-[#F6921E]/10 border-[#F6921E]/30"
-                }`}>
-                  <span className={`font-mono font-bold text-lg flex-1 ${
-                    paymentMethod === "bkash" ? "text-[#E2136E]" : "text-[#F6921E]"
-                  }`}>
-                    {PAYMENT_NUMBER}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(PAYMENT_NUMBER)}
-                    className="h-8 px-3 hover:bg-background/50"
-                  >
-                    <Copy className="w-4 h-4 mr-1" />
-                    Copy
-                  </Button>
+              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                <h3 className="font-semibold text-foreground">Order Items</h3>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {items.map((item) => (
+                    <div key={item.id} className="flex justify-between text-sm">
+                      <span>{item.product_name} × {item.quantity}</span>
+                      <span className="text-gold">৳{(item.product_price * item.quantity).toLocaleString()}</span>
+                    </div>
+                  ))}
                 </div>
-
-                <div className="mt-4 space-y-2">
-                  <label className="text-sm font-medium text-foreground">Transaction ID *</label>
-                  <Input
-                    required
-                    value={transactionId}
-                    onChange={(e) => setTransactionId(e.target.value)}
-                    className={`bg-background focus:ring-2 ${
-                      paymentMethod === "bkash" 
-                        ? "border-[#E2136E]/30 focus:border-[#E2136E] focus:ring-[#E2136E]/20" 
-                        : "border-[#F6921E]/30 focus:border-[#F6921E] focus:ring-[#F6921E]/20"
-                    }`}
-                    placeholder="e.g., TXN123456789"
-                  />
+                <div className="border-t border-border pt-2 flex justify-between font-semibold">
+                  <span>Total</span>
+                  <span className="text-gold text-lg">৳{totalPrice.toLocaleString()}</span>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Navigation Buttons */}
+          <div className="flex gap-3 mt-6 pt-4 border-t border-gold/20">
+            {currentStep > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleBack}
+                className="flex-1 border-gold/30 hover:bg-gold/10"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Back
+              </Button>
+            )}
+            
+            {currentStep < 2 ? (
+              <Button
+                type="button"
+                onClick={handleNext}
+                className="flex-1 bg-gradient-to-r from-gold to-gold-light text-background hover:opacity-90"
+              >
+                Next
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="flex-1 bg-gradient-to-r from-gold to-gold-light text-background hover:opacity-90"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Placing Order...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Place Order
+                  </>
+                )}
+              </Button>
             )}
           </div>
-
-          <div className="border-t border-gold/20 pt-4">
-            <div className="flex justify-between mb-4">
-              <span className="text-muted-foreground">Total Amount:</span>
-              <span className="font-display text-gold text-xl">৳{totalPrice.toLocaleString()}</span>
-            </div>
-            <Button
-              type="submit"
-              disabled={isSubmitting || ((paymentMethod === "bkash" || paymentMethod === "nagad") && !transactionId.trim())}
-              className="w-full bg-gradient-to-r from-gold to-gold-light text-background hover:opacity-90"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Placing Order...
-                </>
-              ) : (
-                "Place Order"
-              )}
-            </Button>
-          </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
