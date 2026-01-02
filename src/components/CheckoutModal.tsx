@@ -220,9 +220,10 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
         const encodedMessage = encodeURIComponent(message);
         setWhatsappUrl(`https://wa.me/8801308697630?text=${encodedMessage}`);
 
+        // SMS notification - fails silently if Twilio isn't configured for Bangladesh
         try {
           const paymentMethodLabel = paymentMethod === "cod" ? "Cash on Delivery" : paymentMethod === "bkash" ? "bKash" : "Nagad";
-          await supabase.functions.invoke("send-order-sms", {
+          const smsResponse = await supabase.functions.invoke("send-order-sms", {
             body: {
               to: formData.phone,
               orderId: orderData.id,
@@ -231,8 +232,12 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
               paymentMethod: paymentMethodLabel,
             },
           });
+          if (smsResponse.error) {
+            console.warn("SMS notification skipped:", smsResponse.error);
+          }
         } catch (smsError) {
-          console.error("Failed to send SMS notification:", smsError);
+          // SMS is optional - order still succeeded
+          console.warn("SMS notification unavailable:", smsError);
         }
       }
 
@@ -241,8 +246,8 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
       clearProgress();
       
       toast({
-        title: "Order Placed Successfully!",
-        description: "We'll contact you shortly. Check your SMS for confirmation.",
+        title: "অর্ডার সফল হয়েছে! ✨",
+        description: "আমরা শীঘ্রই আপনার সাথে যোগাযোগ করব।",
       });
     } catch (error) {
       console.error("Order error:", error);
