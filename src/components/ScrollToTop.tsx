@@ -1,15 +1,22 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useLayoutEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 export const ScrollToTop = () => {
   const { pathname } = useLocation();
   const isFirstRender = useRef(true);
 
-  // Handle initial page load and refresh - instant scroll
+  // Disable browser scroll restoration immediately
+  if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+    window.history.scrollRestoration = "manual";
+  }
+
+  // Force scroll to top BEFORE paint on initial load/refresh
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  // Also force on mount with useEffect as fallback
   useEffect(() => {
-    if ("scrollRestoration" in window.history) {
-      window.history.scrollRestoration = "manual";
-    }
     window.scrollTo(0, 0);
   }, []);
 
