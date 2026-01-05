@@ -6,6 +6,7 @@ export interface Product {
   name: string;
   price: number;
   image_url: string | null;
+  images: string[] | null;
   category: string;
   description: string | null;
   featured: boolean;
@@ -37,7 +38,7 @@ export const useProducts = () => {
     try {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, price, image_url, category, description, featured, in_stock")
+        .select("id, name, price, image_url, images, category, description, featured, in_stock")
         .eq("in_stock", true)
         .order("created_at", { ascending: false });
 

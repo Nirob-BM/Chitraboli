@@ -16,6 +16,7 @@ interface Product {
   name: string;
   price: number;
   image_url: string | null;
+  images: string[] | null;
   category: string;
   description: string | null;
   featured: boolean;
@@ -104,11 +105,16 @@ const ProductDetail = () => {
     });
   };
 
-  // Generate multiple image views from single image (simulated gallery)
+  // Get product images from images array or fallback to image_url
   const getProductImages = () => {
-    if (!product?.image_url) return [];
-    // For now, use the same image for gallery - can be extended for multiple images
-    return [product.image_url, product.image_url, product.image_url, product.image_url];
+    if (!product) return [];
+    // Use images array if available and has items
+    if (product.images && product.images.length > 0) {
+      return product.images.filter(img => img && img.trim() !== '');
+    }
+    // Fallback to single image_url
+    if (product.image_url) return [product.image_url];
+    return [];
   };
 
   const images = getProductImages();

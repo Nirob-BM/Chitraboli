@@ -16,6 +16,7 @@ interface Product {
   name: string;
   price: number;
   image_url: string | null;
+  images: string[] | null;
   category: string;
   description: string | null;
   featured: boolean;
@@ -34,8 +35,8 @@ export const ProductManagement = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [showCustomCategory, setShowCustomCategory] = useState(false);
   const [customCategory, setCustomCategory] = useState("");
 
@@ -50,6 +51,7 @@ export const ProductManagement = () => {
     category: "Rings",
     description: "",
     image_url: "",
+    images: [] as string[],
     featured: false,
     in_stock: true,
   });
@@ -85,15 +87,28 @@ export const ProductManagement = () => {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (files) {
+      const newFiles = Array.from(files).slice(0, 4 - imageFiles.length); // Limit to 4 total
+      setImageFiles(prev => [...prev, ...newFiles].slice(0, 4));
+      
+      newFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreviews(prev => [...prev, reader.result as string].slice(0, 4));
+        };
+        reader.readAsDataURL(file);
+      });
     }
+  };
+
+  const removeImage = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
   };
 
   const uploadImage = async (file: File): Promise<string | null> => {
@@ -119,26 +134,28 @@ export const ProductManagement = () => {
     setSubmitting(true);
 
     try {
-      let imageUrl = formData.image_url;
+      let uploadedImages: string[] = [...formData.images];
 
-      // Upload new image if selected
-      if (imageFile) {
-        const uploadedUrl = await uploadImage(imageFile);
-        if (uploadedUrl) {
-          imageUrl = uploadedUrl;
-        } else {
-          toast({ title: "Error", description: "Failed to upload image", variant: "destructive" });
-          setSubmitting(false);
-          return;
+      // Upload new images if selected
+      if (imageFiles.length > 0) {
+        for (const file of imageFiles) {
+          const uploadedUrl = await uploadImage(file);
+          if (uploadedUrl) {
+            uploadedImages.push(uploadedUrl);
+          }
         }
       }
+
+      // Limit to 4 images
+      uploadedImages = uploadedImages.slice(0, 4);
 
       const productData = {
         name: formData.name.trim(),
         price: parseFloat(formData.price),
         category: formData.category,
         description: formData.description.trim() || null,
-        image_url: imageUrl || null,
+        image_url: uploadedImages[0] || formData.image_url || null,
+        images: uploadedImages,
         featured: formData.featured,
         in_stock: formData.in_stock,
       };
@@ -184,24 +201,26 @@ export const ProductManagement = () => {
 
   const openEditModal = (product: Product) => {
     setEditingProduct(product);
+    const existingImages = product.images || (product.image_url ? [product.image_url] : []);
     setFormData({
       name: product.name,
       price: product.price.toString(),
       category: product.category,
       description: product.description || "",
       image_url: product.image_url || "",
+      images: existingImages,
       featured: product.featured,
       in_stock: product.in_stock,
     });
-    setImagePreview(product.image_url);
+    setImagePreviews(existingImages);
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingProduct(null);
-    setImageFile(null);
-    setImagePreview(null);
+    setImageFiles([]);
+    setImagePreviews([]);
     setShowCustomCategory(false);
     setCustomCategory("");
     setFormData({
@@ -210,6 +229,7 @@ export const ProductManagement = () => {
       category: "Rings",
       description: "",
       image_url: "",
+      images: [],
       featured: false,
       in_stock: true,
     });
@@ -316,37 +336,37 @@ export const ProductManagement = () => {
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
             {/* Image Upload */}
             <div className="space-y-2">
-              <Label>Product Image</Label>
-              <div className="flex items-center gap-4">
-                <div className="w-24 h-24 rounded-lg border border-border bg-muted overflow-hidden">
-                  {imagePreview ? (
-                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ImagePlus className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="cursor-pointer"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Or paste image URL below</p>
-                  <Input
-                    value={formData.image_url}
-                    onChange={(e) => {
-                      setFormData({ ...formData, image_url: e.target.value });
-                      setImagePreview(e.target.value);
-                      setImageFile(null);
-                    }}
-                    placeholder="https://..."
-                    className="mt-2"
-                  />
-                </div>
+              <Label>Product Images (up to 4)</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="relative aspect-square rounded-lg border border-border bg-muted overflow-hidden group">
+                    <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-1 right-1 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {imagePreviews.length < 4 && (
+                  <label className="aspect-square rounded-lg border-2 border-dashed border-border bg-muted/50 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors">
+                    <ImagePlus className="w-6 h-6 text-muted-foreground mb-1" />
+                    <span className="text-xs text-muted-foreground">Add</span>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </label>
+                )}
               </div>
+              <p className="text-xs text-muted-foreground">
+                {imagePreviews.length}/4 images • Click to add, hover to remove
+              </p>
             </div>
 
             {/* Name */}
