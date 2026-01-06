@@ -99,11 +99,11 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Special Offers Section */}
-      <SpecialOffersSection />
-
       {/* New Arrivals Section */}
       <NewArrivalsSection />
+
+      {/* Special Offers Section */}
+      <SpecialOffersSection />
 
       {/* Featured Products */}
       <section className="py-20 bg-background">
