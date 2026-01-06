@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/ProductCard";
 import { NewArrivalsSection } from "@/components/NewArrivalsSection";
 import { SpecialOffersSection } from "@/components/SpecialOffersSection";
+import { SEO } from "@/components/SEO";
 import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles, Heart, Award } from "lucide-react";
 import { getFeaturedProducts } from "@/data/products";
@@ -12,6 +13,7 @@ const Index = () => {
   const featuredProducts = getFeaturedProducts();
   return (
     <Layout>
+      <SEO />
       {/* Hero Section */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden gradient-hero">
         {/* Background Image */}

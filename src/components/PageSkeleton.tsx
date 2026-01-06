@@ -87,3 +87,11 @@ export const CollectionGridSkeleton = () => (
     ))}
   </div>
 );
+
+// Generic page skeleton for lazy loading fallback
+export const PageSkeleton = () => (
+  <div className="min-h-screen bg-background">
+    <HeroSkeleton />
+    <FeaturesSkeleton />
+  </div>
+);

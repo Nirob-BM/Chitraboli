@@ -3,11 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Heart, Sparkles, Award, Users } from "lucide-react";
 import { ReviewsSection } from "@/components/ReviewsSection";
+import { SEO } from "@/components/SEO";
 import heroImage from "@/assets/hero-jewelry.jpg";
 
 const About = () => {
   return (
     <Layout>
+      <SEO 
+        title="About Us" 
+        description="Learn about Chitraboli - where tradition meets artistry. Every piece of our handmade jewellery tells a story of passion and craftsmanship."
+      />
       {/* Hero */}
       <section className="relative py-24 bg-card overflow-hidden">
         <div className="absolute inset-0 opacity-20">

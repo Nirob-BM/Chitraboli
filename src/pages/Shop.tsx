@@ -1,15 +1,20 @@
 import { Layout } from "@/components/Layout";
 import { ProductCard } from "@/components/ProductCard";
-import { useProducts, Product } from "@/hooks/useProducts";
+import { useProducts } from "@/hooks/useProducts";
 import { useState, useMemo } from "react";
 import { ShopFilters } from "@/components/ShopFilters";
 import { CategoryFilterSkeleton, ProductGridSkeleton } from "@/components/PageSkeleton";
+import { SEO } from "@/components/SEO";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const Shop = () => {
   const { products, loading, getCategories } = useProducts();
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortOption, setSortOption] = useState<string>("newest");
+
+  // Debounce search for better performance
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   const categories = getCategories();
 
@@ -21,9 +26,9 @@ const Shop = () => {
       result = result.filter((p) => p.category === selectedCategory);
     }
 
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+    // Filter by search query (using debounced value)
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.toLowerCase();
       result = result.filter(
         (p) =>
           p.name.toLowerCase().includes(query) ||
@@ -50,10 +55,15 @@ const Shop = () => {
     }
 
     return result;
-  }, [products, selectedCategory, searchQuery, sortOption]);
+  }, [products, selectedCategory, debouncedSearchQuery, sortOption]);
 
   return (
     <Layout>
+      <SEO 
+        title="Shop" 
+        description="Browse our complete collection of handcrafted jewellery. Rings, necklaces, earrings, and bangles made with love in Bangladesh."
+        keywords="shop jewellery, handmade rings, necklaces, earrings, bangles, Bangladesh"
+      />
       {/* Header */}
       <section className="py-16 bg-card">
         <div className="container mx-auto px-4 text-center">

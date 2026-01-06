@@ -6,6 +6,8 @@ import { Facebook, Instagram, Mail, Phone, MapPin, Send, Loader2, MessageCircle 
 import { toast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { SEO } from "@/components/SEO";
+import { useRateLimit } from "@/hooks/useRateLimit";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -17,11 +19,24 @@ const Contact = () => {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  // Rate limit: max 3 submissions per 5 minutes
+  const { executeWithLimit, remainingAttempts, isAllowed } = useRateLimit({
+    maxAttempts: 3,
+    windowMs: 5 * 60 * 1000,
+    onRateLimitExceeded: () => {
+      toast({
+        title: "Too many attempts",
+        description: "Please wait a few minutes before sending another message.",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
-    try {
+    const result = await executeWithLimit(async () => {
       const { error } = await supabase
         .from('contact_messages')
         .insert({
@@ -46,19 +61,29 @@ const Contact = () => {
         subject: "",
         message: ""
       });
-    } catch (error: any) {
+
+      return true;
+    });
+
+    if (result === null) {
+      // Rate limited - already handled by onRateLimitExceeded
+    } else if (!result) {
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setSubmitting(false);
     }
+
+    setSubmitting(false);
   };
 
   return (
     <Layout>
+      <SEO 
+        title="Contact Us" 
+        description="Get in touch with Chitraboli. Have questions about our handmade jewellery or want to discuss a custom piece? We'd love to hear from you."
+      />
       {/* Header */}
       <section className="py-16 bg-card">
         <div className="container mx-auto px-4 text-center">
