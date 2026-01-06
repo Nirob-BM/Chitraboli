@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { ShoppingCart, ArrowLeft, Star, Minus, Plus, Check, Truck, Shield, RotateCcw } from "lucide-react";
 import { ReviewsSection } from "@/components/ReviewsSection";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SEO } from "@/components/SEO";
 
 interface Product {
   id: string;
@@ -121,6 +122,14 @@ const ProductDetail = () => {
 
   return (
     <Layout>
+      {product && (
+        <SEO 
+          title={product.name}
+          description={product.description || `Shop ${product.name} - handcrafted ${product.category.toLowerCase()} from Chitraboli. Made with love in Bangladesh.`}
+          image={product.image_url || undefined}
+          type="product"
+        />
+      )}
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           {/* Breadcrumb */}

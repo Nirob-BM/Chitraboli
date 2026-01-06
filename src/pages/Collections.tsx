@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { SEO } from "@/components/SEO";
 
 const Collections = () => {
   const { data: collections, isLoading } = useQuery({
@@ -41,6 +42,10 @@ const Collections = () => {
 
   return (
     <Layout>
+      <SEO 
+        title="Collections" 
+        description="Explore our curated jewellery collections. Each collection tells a unique story of craftsmanship and beauty."
+      />
       {/* Header */}
       <section className="py-16 bg-card">
         <div className="container mx-auto px-4 text-center">
