@@ -16,16 +16,11 @@ import nagadLogo from "@/assets/nagad-logo.svg";
 
 const CHECKOUT_STORAGE_KEY = "chitraboli-checkout-progress";
 
-// Zod schemas for validation
+// Order item validation schema (for reference - actual validation done server-side)
 const OrderItemSchema = z.object({
   product_id: z.string().min(1),
-  product_name: z.string().min(1).max(200),
-  product_price: z.number().positive(),
   quantity: z.number().int().positive(),
-  product_image: z.string().nullable().optional()
 });
-
-const OrderItemsSchema = z.array(OrderItemSchema).min(1);
 
 const CustomerDetailsSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
@@ -180,65 +175,83 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
     try {
       const sessionId = localStorage.getItem("chitraboli-session") || "";
       
-      const validatedItems = OrderItemsSchema.parse(items.map(item => ({
+      // Send only product IDs and quantities - prices will be validated server-side
+      const orderItems = items.map(item => ({
         product_id: item.product_id,
-        product_name: item.product_name,
-        product_price: item.product_price,
         quantity: item.quantity,
-        product_image: item.product_image || null
-      })));
+      }));
       
-      const { data: orderData, error } = await supabase.from("orders").insert([{
-        session_id: sessionId,
-        customer_name: formData.name,
-        customer_email: formData.email,
-        customer_phone: formData.phone,
-        customer_address: formData.address,
-        items: validatedItems,
-        total_amount: totalPrice,
-        status: "pending",
-        payment_method: paymentMethod,
-        transaction_id: paymentMethod !== "cod" ? transactionId.trim() : null,
-      }]).select().single();
+      // Use edge function for secure order creation with server-side price validation
+      const { data: response, error } = await supabase.functions.invoke("create-order", {
+        body: {
+          items: orderItems,
+          customer_details: {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            address: formData.address,
+          },
+          payment_method: paymentMethod,
+          transaction_id: paymentMethod !== "cod" ? transactionId.trim() : undefined,
+          session_id: sessionId,
+        },
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(error.message || "Failed to create order");
+      }
 
-      if (orderData) {
-        const message = formatOrderForWhatsApp({
-          orderId: orderData.id,
-          customerName: formData.name,
-          customerEmail: formData.email,
-          customerPhone: formData.phone,
-          customerAddress: formData.address,
-          items: items.map(item => ({
-            name: item.product_name,
-            price: item.product_price,
-            quantity: item.quantity
-          })),
-          totalAmount: totalPrice
+      if (!response?.success || !response?.order) {
+        const errorMessage = response?.error || "Failed to create order";
+        console.error("Order creation failed:", errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      const orderData = response.order;
+
+      // Use server-validated total amount for WhatsApp message
+      const serverTotalAmount = orderData.total_amount;
+      const serverItems = orderData.items || items.map(item => ({
+        name: item.product_name,
+        price: item.product_price,
+        quantity: item.quantity
+      }));
+
+      const message = formatOrderForWhatsApp({
+        orderId: orderData.id,
+        customerName: formData.name,
+        customerEmail: formData.email,
+        customerPhone: formData.phone,
+        customerAddress: formData.address,
+        items: serverItems.map((item: { product_name?: string; name?: string; product_price?: number; price?: number; quantity: number }) => ({
+          name: item.product_name || item.name || '',
+          price: item.product_price || item.price || 0,
+          quantity: item.quantity
+        })),
+        totalAmount: serverTotalAmount
+      });
+      const encodedMessage = encodeURIComponent(message);
+      setWhatsappUrl(`https://wa.me/8801308697630?text=${encodedMessage}`);
+
+      // SMS notification - fails silently if Twilio isn't configured for Bangladesh
+      try {
+        const paymentMethodLabel = paymentMethod === "cod" ? "Cash on Delivery" : paymentMethod === "bkash" ? "bKash" : "Nagad";
+        const smsResponse = await supabase.functions.invoke("send-order-sms", {
+          body: {
+            to: formData.phone,
+            orderId: orderData.id,
+            customerName: formData.name,
+            totalAmount: serverTotalAmount,
+            paymentMethod: paymentMethodLabel,
+          },
         });
-        const encodedMessage = encodeURIComponent(message);
-        setWhatsappUrl(`https://wa.me/8801308697630?text=${encodedMessage}`);
-
-        // SMS notification - fails silently if Twilio isn't configured for Bangladesh
-        try {
-          const paymentMethodLabel = paymentMethod === "cod" ? "Cash on Delivery" : paymentMethod === "bkash" ? "bKash" : "Nagad";
-          const smsResponse = await supabase.functions.invoke("send-order-sms", {
-            body: {
-              to: formData.phone,
-              orderId: orderData.id,
-              customerName: formData.name,
-              totalAmount: totalPrice,
-              paymentMethod: paymentMethodLabel,
-            },
-          });
-          if (smsResponse.error) {
-            console.warn("SMS notification skipped:", smsResponse.error);
-          }
-        } catch (smsError) {
-          // SMS is optional - order still succeeded
-          console.warn("SMS notification unavailable:", smsError);
+        if (smsResponse.error) {
+          console.warn("SMS notification skipped:", smsResponse.error);
         }
+      } catch (smsError) {
+        // SMS is optional - order still succeeded
+        console.warn("SMS notification unavailable:", smsError);
       }
 
       setOrderPlaced(true);
@@ -253,7 +266,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
       console.error("Order error:", error);
       toast({
         title: "Error",
-        description: "Failed to place order. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to place order. Please try again.",
         variant: "destructive",
       });
     } finally {
