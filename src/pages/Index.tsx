@@ -2,6 +2,7 @@ import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/ProductCard";
 import { NewArrivalsSection } from "@/components/NewArrivalsSection";
+import { SpecialOffersSection } from "@/components/SpecialOffersSection";
 import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles, Heart, Award } from "lucide-react";
 import { getFeaturedProducts } from "@/data/products";
@@ -97,6 +98,9 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* Special Offers Section */}
+      <SpecialOffersSection />
 
       {/* New Arrivals Section */}
       <NewArrivalsSection />
