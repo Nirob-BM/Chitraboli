@@ -14,6 +14,120 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_activity_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      admin_sessions: {
+        Row: {
+          created_at: string
+          device_info: Json | null
+          expires_at: string | null
+          id: string
+          ip_address: string | null
+          is_active: boolean | null
+          last_activity: string | null
+          session_token: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_info?: Json | null
+          expires_at?: string | null
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          last_activity?: string | null
+          session_token: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_info?: Json | null
+          expires_at?: string | null
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          last_activity?: string | null
+          session_token?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      backup_history: {
+        Row: {
+          backup_type: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          file_name: string | null
+          file_size: number | null
+          file_url: string | null
+          id: string
+          status: string | null
+        }
+        Insert: {
+          backup_type: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          status?: string | null
+        }
+        Update: {
+          backup_type?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          status?: string | null
+        }
+        Relationships: []
+      }
       cart_items: {
         Row: {
           created_at: string
@@ -122,6 +236,206 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_notes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_email: string
+          customer_phone: string | null
+          id: string
+          note: string
+          note_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_email: string
+          customer_phone?: string | null
+          id?: string
+          note: string
+          note_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_email?: string
+          customer_phone?: string | null
+          id?: string
+          note?: string
+          note_type?: string | null
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          address: string | null
+          block_reason: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_blocked: boolean | null
+          name: string | null
+          phone: string | null
+          tags: string[] | null
+          total_orders: number | null
+          total_spent: number | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          block_reason?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_blocked?: boolean | null
+          name?: string | null
+          phone?: string | null
+          tags?: string[] | null
+          total_orders?: number | null
+          total_spent?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          block_reason?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_blocked?: boolean | null
+          name?: string | null
+          phone?: string | null
+          tags?: string[] | null
+          total_orders?: number | null
+          total_spent?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      media_library: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          file_name: string
+          file_size: number | null
+          file_type: string
+          file_url: string
+          folder: string | null
+          id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          file_name: string
+          file_size?: number | null
+          file_type: string
+          file_url: string
+          folder?: string | null
+          id?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          file_name?: string
+          file_size?: number | null
+          file_type?: string
+          file_url?: string
+          folder?: string | null
+          id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      menu_items: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          icon: string | null
+          id: string
+          is_visible: boolean | null
+          label: string
+          menu_location: string
+          open_in_new_tab: boolean | null
+          parent_id: string | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_visible?: boolean | null
+          label: string
+          menu_location?: string
+          open_in_new_tab?: boolean | null
+          parent_id?: string | null
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_visible?: boolean | null
+          label?: string
+          menu_location?: string
+          open_in_new_tab?: boolean | null
+          parent_id?: string | null
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_settings: {
+        Row: {
+          created_at: string
+          email_enabled: boolean | null
+          id: string
+          is_enabled: boolean | null
+          notification_type: string
+          recipients: string[] | null
+          sms_enabled: boolean | null
+          template: Json | null
+          updated_at: string
+          whatsapp_enabled: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          email_enabled?: boolean | null
+          id?: string
+          is_enabled?: boolean | null
+          notification_type: string
+          recipients?: string[] | null
+          sms_enabled?: boolean | null
+          template?: Json | null
+          updated_at?: string
+          whatsapp_enabled?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          email_enabled?: boolean | null
+          id?: string
+          is_enabled?: boolean | null
+          notification_type?: string
+          recipients?: string[] | null
+          sms_enabled?: boolean | null
+          template?: Json | null
+          updated_at?: string
+          whatsapp_enabled?: boolean | null
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           created_at: string
@@ -167,6 +481,39 @@ export type Database = {
           total_amount?: number
           transaction_id?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      page_content: {
+        Row: {
+          content: Json
+          created_at: string
+          display_order: number | null
+          id: string
+          is_visible: boolean | null
+          page_slug: string
+          section_key: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_visible?: boolean | null
+          page_slug: string
+          section_key: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_visible?: boolean | null
+          page_slug?: string
+          section_key?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -260,6 +607,42 @@ export type Database = {
         }
         Relationships: []
       }
+      site_settings: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          label: string
+          setting_key: string
+          setting_type: string
+          setting_value: Json
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          label: string
+          setting_key: string
+          setting_type?: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          label?: string
+          setting_key?: string
+          setting_type?: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -307,7 +690,13 @@ export type Database = {
       user_has_ordered: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role:
+        | "admin"
+        | "user"
+        | "super_admin"
+        | "content_manager"
+        | "order_manager"
+        | "support_agent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -435,7 +824,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: [
+        "admin",
+        "user",
+        "super_admin",
+        "content_manager",
+        "order_manager",
+        "support_agent",
+      ],
     },
   },
 } as const
