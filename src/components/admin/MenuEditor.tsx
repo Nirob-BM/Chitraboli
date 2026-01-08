@@ -106,6 +106,7 @@ export const MenuEditor = () => {
           open_in_new_tab: formData.open_in_new_tab,
           menu_location: formData.menu_location,
           display_order: locationItems.length,
+          parent_id: null,
         });
         if (result.success) {
           toast.success("Menu item added");

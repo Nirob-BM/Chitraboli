@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface MenuItem {
   id: string;
-  menu_location: string;
+  menu_location: 'header' | 'footer';
   label: string;
   url: string;
   icon: string | null;
@@ -12,6 +12,8 @@ export interface MenuItem {
   is_visible: boolean;
   open_in_new_tab: boolean;
 }
+
+export type MenuItemInput = Omit<MenuItem, 'id'> & { parent_id?: string | null };
 
 export const useMenuItems = (location?: string) => {
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -32,7 +34,7 @@ export const useMenuItems = (location?: string) => {
       const { data, error } = await query;
 
       if (error) throw error;
-      setItems(data || []);
+      setItems((data || []) as MenuItem[]);
     } catch (err: any) {
       console.error("Error fetching menu items:", err);
       setError(err.message);
@@ -49,7 +51,7 @@ export const useMenuItems = (location?: string) => {
     return items.filter(item => item.is_visible);
   }, [items]);
 
-  const addItem = async (item: Omit<MenuItem, 'id'>) => {
+  const addItem = async (item: MenuItemInput) => {
     try {
       const { data, error } = await supabase
         .from("menu_items")
@@ -59,7 +61,7 @@ export const useMenuItems = (location?: string) => {
 
       if (error) throw error;
       
-      setItems(prev => [...prev, data]);
+      setItems(prev => [...prev, data as MenuItem]);
       return { success: true, data };
     } catch (err: any) {
       console.error("Error adding menu item:", err);
