@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Package, Phone, Mail, MapPin, Calendar, ExternalLink, LogOut, Loader2, 
   CreditCard, Smartphone, Banknote, Search, Filter, Trash2, X, BarChart3,
-  MessageSquare, Bell, ShoppingBag, Shield, Tag, FolderOpen
+  MessageSquare, Bell, ShoppingBag, Shield, Tag, FolderOpen, Settings,
+  FileText, Menu, Users, Activity, BellRing
 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { toast } from "sonner";
@@ -31,6 +32,13 @@ import { ProductManagement } from "@/components/admin/ProductManagement";
 import { SecurityDashboard } from "@/components/admin/SecurityDashboard";
 import { CategoryManagement } from "@/components/admin/CategoryManagement";
 import { CollectionManagement } from "@/components/admin/CollectionManagement";
+import { SiteSettings } from "@/components/admin/SiteSettings";
+import { PageContentEditor } from "@/components/admin/PageContentEditor";
+import { MenuEditor } from "@/components/admin/MenuEditor";
+import { CustomerManagement } from "@/components/admin/CustomerManagement";
+import { ActivityLogs } from "@/components/admin/ActivityLogs";
+import { NotificationSettings } from "@/components/admin/NotificationSettings";
+import { BackupManagement } from "@/components/admin/BackupManagement";
 import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 
 interface OrderItem {
@@ -444,7 +452,7 @@ const Admin = () => {
 
           {/* Tabs Navigation */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-flex bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-1">
+            <TabsList className="flex flex-wrap gap-1 h-auto w-full lg:w-auto bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-1.5">
               <TabsTrigger 
                 value="orders" 
                 className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -479,6 +487,13 @@ const Admin = () => {
                 <span className="hidden sm:inline">Collections</span>
               </TabsTrigger>
               <TabsTrigger 
+                value="customers" 
+                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <Users className="w-4 h-4" />
+                <span className="hidden sm:inline">Customers</span>
+              </TabsTrigger>
+              <TabsTrigger 
                 value="statistics" 
                 className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
@@ -486,18 +501,53 @@ const Admin = () => {
                 <span className="hidden sm:inline">Statistics</span>
               </TabsTrigger>
               <TabsTrigger 
-                value="security" 
-                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <Shield className="w-4 h-4" />
-                <span className="hidden sm:inline">Security</span>
-              </TabsTrigger>
-              <TabsTrigger 
                 value="messages" 
                 className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
                 <MessageSquare className="w-4 h-4" />
                 <span className="hidden sm:inline">Messages</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="site-settings" 
+                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">Site Settings</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="page-editor" 
+                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline">Pages</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="menu-editor" 
+                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <Menu className="w-4 h-4" />
+                <span className="hidden sm:inline">Menus</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="notifications" 
+                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <BellRing className="w-4 h-4" />
+                <span className="hidden sm:inline">Notifications</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="activity-logs" 
+                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <Activity className="w-4 h-4" />
+                <span className="hidden sm:inline">Activity</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="security" 
+                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <Shield className="w-4 h-4" />
+                <span className="hidden sm:inline">Security</span>
               </TabsTrigger>
             </TabsList>
 
@@ -531,6 +581,60 @@ const Admin = () => {
             {/* Security Tab */}
             <TabsContent value="security">
               <SecurityDashboard />
+            </TabsContent>
+
+            {/* Customers Tab */}
+            <TabsContent value="customers">
+              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
+                <CardContent className="p-4 sm:p-6">
+                  <CustomerManagement />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Site Settings Tab */}
+            <TabsContent value="site-settings">
+              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
+                <CardContent className="p-4 sm:p-6">
+                  <SiteSettings />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Page Editor Tab */}
+            <TabsContent value="page-editor">
+              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
+                <CardContent className="p-4 sm:p-6">
+                  <PageContentEditor />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Menu Editor Tab */}
+            <TabsContent value="menu-editor">
+              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
+                <CardContent className="p-4 sm:p-6">
+                  <MenuEditor />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Notifications Tab */}
+            <TabsContent value="notifications">
+              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
+                <CardContent className="p-4 sm:p-6">
+                  <NotificationSettings />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Activity Logs Tab */}
+            <TabsContent value="activity-logs">
+              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
+                <CardContent className="p-4 sm:p-6">
+                  <ActivityLogs />
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Orders Tab */}
