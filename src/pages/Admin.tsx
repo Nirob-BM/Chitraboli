@@ -6,12 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Package, Phone, Mail, MapPin, Calendar, ExternalLink, LogOut, Loader2, 
-  CreditCard, Smartphone, Banknote, Search, Filter, Trash2, X, BarChart3,
-  MessageSquare, Bell, ShoppingBag, Shield, Tag, FolderOpen, Settings,
-  FileText, Menu, Users, Activity, BellRing
+  CreditCard, Smartphone, Banknote, Search, Filter, Trash2, X, Bell
 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { toast } from "sonner";
@@ -39,6 +36,8 @@ import { CustomerManagement } from "@/components/admin/CustomerManagement";
 import { ActivityLogs } from "@/components/admin/ActivityLogs";
 import { NotificationSettings } from "@/components/admin/NotificationSettings";
 import { BackupManagement } from "@/components/admin/BackupManagement";
+import { RiderManagement } from "@/components/admin/RiderManagement";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 
 interface OrderItem {
@@ -99,6 +98,7 @@ const Admin = () => {
   const [deletingOrder, setDeletingOrder] = useState<string | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [activeTab, setActiveTab] = useState("orders");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const navigate = useNavigate();
 
   // Notification hook
@@ -345,6 +345,346 @@ const Admin = () => {
 
   const hasActiveFilters = searchQuery || statusFilter !== "all" || paymentFilter !== "all" || dateFilter !== "all";
 
+  // Render content based on active tab
+  const renderContent = () => {
+    switch (activeTab) {
+      case "orders":
+        return renderOrdersContent();
+      case "products":
+        return <ProductManagement />;
+      case "categories":
+        return <CategoryManagement />;
+      case "collections":
+        return <CollectionManagement />;
+      case "riders":
+        return <RiderManagement />;
+      case "customer-list":
+        return <CustomerManagement />;
+      case "messages":
+        return <ContactMessages />;
+      case "statistics":
+        return <OrderStatistics orders={orders} />;
+      case "site-settings":
+        return <SiteSettings />;
+      case "page-editor":
+        return <PageContentEditor />;
+      case "menu-editor":
+        return <MenuEditor />;
+      case "notifications":
+        return <NotificationSettings />;
+      case "activity-logs":
+        return <ActivityLogs />;
+      case "backups":
+        return <BackupManagement />;
+      case "security":
+        return <SecurityDashboard />;
+      default:
+        return renderOrdersContent();
+    }
+  };
+
+  const renderOrdersContent = () => (
+    <div className="space-y-6">
+      {/* Filters Section */}
+      <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col gap-4">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                placeholder="Search orders by name, email, phone, ID, or transaction..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 h-12 text-base bg-background/50 border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-11 bg-background/50 border-border/50 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-muted-foreground" />
+                    <SelectValue placeholder="Status" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {ORDER_STATUSES.map((status) => (
+                    <SelectItem key={status.value} value={status.value} className="rounded-lg">
+                      {status.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+                <SelectTrigger className="h-11 bg-background/50 border-border/50 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-muted-foreground" />
+                    <SelectValue placeholder="Payment" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {PAYMENT_FILTERS.map((payment) => (
+                    <SelectItem key={payment.value} value={payment.value} className="rounded-lg">
+                      {payment.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="h-11 bg-background/50 border-border/50 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <SelectValue placeholder="Date" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="all" className="rounded-lg">All Time</SelectItem>
+                  <SelectItem value="today" className="rounded-lg">Today</SelectItem>
+                  <SelectItem value="week" className="rounded-lg">This Week</SelectItem>
+                  <SelectItem value="month" className="rounded-lg">This Month</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {hasActiveFilters && (
+                <Button 
+                  variant="ghost" 
+                  onClick={clearFilters} 
+                  className="h-11 gap-2 text-muted-foreground hover:text-foreground rounded-xl border border-dashed border-border/50"
+                >
+                  <X className="w-4 h-4" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Orders List */}
+      {filteredOrders.length === 0 ? (
+        <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
+          <CardContent className="flex flex-col items-center justify-center py-16 sm:py-24">
+            <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6">
+              <Package className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-xl sm:text-2xl font-display text-foreground mb-2">
+              {hasActiveFilters ? "No Matching Orders" : "No Orders Yet"}
+            </h3>
+            <p className="text-muted-foreground text-center max-w-md">
+              {hasActiveFilters 
+                ? "Try adjusting your filters to see more orders." 
+                : "Orders will appear here when customers place them."}
+            </p>
+            {hasActiveFilters && (
+              <Button variant="outline" onClick={clearFilters} className="mt-6 rounded-full">
+                Clear Filters
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {filteredOrders.map((order) => (
+            <Card key={order.id} className="bg-card/80 backdrop-blur-sm border-border/50 overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <CardHeader className="bg-gradient-to-r from-muted/50 to-transparent border-b border-border/50 p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Package className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="font-display text-lg">
+                          #{order.id.slice(0, 8)}
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 sm:hidden">
+                          <Calendar className="w-3 h-3" />
+                          {formatDate(order.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge className={`${getStatusColor(order.status)} rounded-full px-3`}>
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Select
+                      value={order.status}
+                      onValueChange={(value) => updateOrderStatus(order.id, value)}
+                      disabled={updatingStatus === order.id}
+                    >
+                      <SelectTrigger className="w-[140px] sm:w-[160px] h-10 rounded-xl bg-background/50">
+                        {updatingStatus === order.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <SelectValue placeholder="Update status" />
+                        )}
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        {ORDER_STATUSES.filter(s => s.value !== 'all').map((status) => (
+                          <SelectItem key={status.value} value={status.value} className="rounded-lg">
+                            {status.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-full">
+                      <Calendar className="w-4 h-4" />
+                      {formatDate(order.created_at)}
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-4 sm:p-6">
+                <div className="grid lg:grid-cols-2 gap-6">
+                  {/* Customer Info */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                        <span className="text-lg">👤</span>
+                      </div>
+                      <h4 className="font-semibold text-foreground">Customer Details</h4>
+                    </div>
+                    <div className="space-y-3 pl-[52px]">
+                      <p className="text-foreground font-medium text-lg">{order.customer_name}</p>
+                      <div className="grid gap-2">
+                        <a 
+                          href={`tel:${order.customer_phone}`} 
+                          className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors group"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                            <Phone className="w-4 h-4" />
+                          </div>
+                          {order.customer_phone}
+                        </a>
+                        <a 
+                          href={`mailto:${order.customer_email}`} 
+                          className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors group"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                            <Mail className="w-4 h-4" />
+                          </div>
+                          <span className="truncate">{order.customer_email}</span>
+                        </a>
+                        <div className="flex items-start gap-3 text-muted-foreground">
+                          <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center flex-shrink-0">
+                            <MapPin className="w-4 h-4" />
+                          </div>
+                          <span className="break-words">{order.customer_address}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Payment Info */}
+                    <div className="pt-4 border-t border-border/50">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          order.payment_method === 'bkash' ? 'bg-pink-500/10' : 
+                          order.payment_method === 'nagad' ? 'bg-orange-500/10' : 'bg-green-500/10'
+                        }`}>
+                          {order.payment_method === 'bkash' ? (
+                            <Smartphone className="w-5 h-5 text-pink-500" />
+                          ) : order.payment_method === 'nagad' ? (
+                            <Smartphone className="w-5 h-5 text-orange-500" />
+                          ) : (
+                            <Banknote className="w-5 h-5 text-green-500" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Payment Method</p>
+                          <p className="font-medium capitalize">
+                            {order.payment_method === 'cod' ? 'Cash on Delivery' : order.payment_method || 'COD'}
+                          </p>
+                        </div>
+                      </div>
+                      {order.transaction_id && (
+                        <div className="flex items-center gap-3 pl-[52px]">
+                          <span className="text-sm text-muted-foreground">TxID:</span>
+                          <code className="font-mono text-xs bg-muted/50 px-3 py-1.5 rounded-full truncate max-w-[180px] sm:max-w-none">
+                            {order.transaction_id}
+                          </code>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Order Items */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
+                        <span className="text-lg">🛍️</span>
+                      </div>
+                      <h4 className="font-semibold text-foreground">Order Items</h4>
+                    </div>
+                    <div className="space-y-3 pl-[52px]">
+                      {order.items.map((item, idx) => {
+                        const normalized = normalizeOrderItem(item);
+                        return (
+                          <div key={idx} className="flex justify-between items-center py-2 border-b border-border/30 last:border-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-foreground">{normalized.name}</span>
+                              <Badge variant="secondary" className="rounded-full text-xs">
+                                x{normalized.quantity}
+                              </Badge>
+                            </div>
+                            <span className="text-primary font-semibold">৳{normalized.price.toLocaleString()}</span>
+                          </div>
+                        );
+                      })}
+                      <div className="pt-4 flex justify-between items-center bg-gradient-to-r from-primary/5 to-transparent -mx-4 px-4 py-3 rounded-xl">
+                        <span className="font-semibold text-foreground">Total Amount</span>
+                        <span className="font-display text-2xl text-primary">৳{order.total_amount.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-border/50">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openWhatsApp(order)}
+                    className="gap-2 rounded-full hover:bg-green-500/10 hover:text-green-600 hover:border-green-500/50 transition-all"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    WhatsApp
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`tel:${order.customer_phone}`, '_self')}
+                    className="gap-2 rounded-full hover:bg-blue-500/10 hover:text-blue-600 hover:border-blue-500/50 transition-all"
+                  >
+                    <Phone className="w-4 h-4" />
+                    Call
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setOrderToDelete(order)}
+                    disabled={deletingOrder === order.id}
+                    className="gap-2 rounded-full text-destructive hover:text-destructive hover:bg-destructive/10 hover:border-destructive/50 ml-auto transition-all"
+                  >
+                    {deletingOrder === order.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                    Delete
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   if (authChecking) {
     return (
       <Layout>
@@ -413,541 +753,62 @@ const Admin = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen py-6 sm:py-10 px-4 sm:px-6 lg:px-8 scroll-smooth bg-gradient-to-b from-background to-muted/20">
-        <div className="max-w-7xl mx-auto">
-          {/* Modern Header */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
-            <div className="space-y-1">
-              <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl text-foreground tracking-tight">
-                Admin Dashboard
-              </h1>
-              <p className="text-muted-foreground text-sm sm:text-base">
-                Manage orders, view analytics, and handle inquiries
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {/* Notification Badge */}
-              {newOrderCount > 0 && (
-                <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-2 animate-pulse">
-                  <Bell className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-medium text-primary">{newOrderCount} new</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm border border-border rounded-full px-4 py-2">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-sm font-medium">{orders.length}</span>
-                <span className="text-muted-foreground text-sm hidden sm:inline">total orders</span>
+      <div className="min-h-screen flex bg-gradient-to-b from-background to-muted/20">
+        {/* Sidebar */}
+        <AdminSidebar 
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          newOrderCount={newOrderCount}
+          collapsed={sidebarCollapsed}
+          onCollapsedChange={setSidebarCollapsed}
+        />
+
+        {/* Main Content */}
+        <div className="flex-1 min-w-0">
+          {/* Header */}
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50 px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="font-display text-2xl sm:text-3xl text-foreground tracking-tight capitalize">
+                  {activeTab.replace(/-/g, ' ')}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Manage your jewelry store
+                </p>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleLogout} 
-                className="gap-2 rounded-full hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-all"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Logout</span>
-              </Button>
+              <div className="flex items-center gap-3">
+                {newOrderCount > 0 && (
+                  <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-2 animate-pulse">
+                    <Bell className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-primary">{newOrderCount} new</span>
+                  </div>
+                )}
+                <div className="hidden sm:flex items-center gap-2 bg-card/80 backdrop-blur-sm border border-border rounded-full px-4 py-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-sm font-medium">{orders.length}</span>
+                  <span className="text-muted-foreground text-sm">orders</span>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleLogout} 
+                  className="gap-2 rounded-full hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-all"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Logout</span>
+                </Button>
+              </div>
             </div>
           </div>
 
-          {/* Tabs Navigation */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="flex flex-wrap gap-1 h-auto w-full lg:w-auto bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-1.5">
-              <TabsTrigger 
-                value="orders" 
-                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <Package className="w-4 h-4" />
-                <span className="hidden sm:inline">Orders</span>
-                {newOrderCount > 0 && (
-                  <Badge className="ml-1 bg-destructive text-destructive-foreground text-xs px-1.5 py-0.5">
-                    {newOrderCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger 
-                value="products" 
-                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                <span className="hidden sm:inline">Products</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="categories" 
-                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <Tag className="w-4 h-4" />
-                <span className="hidden sm:inline">Categories</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="collections" 
-                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <FolderOpen className="w-4 h-4" />
-                <span className="hidden sm:inline">Collections</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="customers" 
-                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">Customers</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="statistics" 
-                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <BarChart3 className="w-4 h-4" />
-                <span className="hidden sm:inline">Statistics</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="messages" 
-                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <MessageSquare className="w-4 h-4" />
-                <span className="hidden sm:inline">Messages</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="site-settings" 
-                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">Site Settings</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="page-editor" 
-                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <FileText className="w-4 h-4" />
-                <span className="hidden sm:inline">Pages</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="menu-editor" 
-                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <Menu className="w-4 h-4" />
-                <span className="hidden sm:inline">Menus</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="notifications" 
-                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <BellRing className="w-4 h-4" />
-                <span className="hidden sm:inline">Notifications</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="activity-logs" 
-                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <Activity className="w-4 h-4" />
-                <span className="hidden sm:inline">Activity</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="security" 
-                className="gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <Shield className="w-4 h-4" />
-                <span className="hidden sm:inline">Security</span>
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Products Tab */}
-            <TabsContent value="products">
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
-                <CardContent className="p-4 sm:p-6">
-                  <ProductManagement />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Categories Tab */}
-            <TabsContent value="categories">
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
-                <CardContent className="p-4 sm:p-6">
-                  <CategoryManagement />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Collections Tab */}
-            <TabsContent value="collections">
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
-                <CardContent className="p-4 sm:p-6">
-                  <CollectionManagement />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Security Tab */}
-            <TabsContent value="security">
-              <SecurityDashboard />
-            </TabsContent>
-
-            {/* Customers Tab */}
-            <TabsContent value="customers">
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
-                <CardContent className="p-4 sm:p-6">
-                  <CustomerManagement />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Site Settings Tab */}
-            <TabsContent value="site-settings">
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
-                <CardContent className="p-4 sm:p-6">
-                  <SiteSettings />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Page Editor Tab */}
-            <TabsContent value="page-editor">
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
-                <CardContent className="p-4 sm:p-6">
-                  <PageContentEditor />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Menu Editor Tab */}
-            <TabsContent value="menu-editor">
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
-                <CardContent className="p-4 sm:p-6">
-                  <MenuEditor />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Notifications Tab */}
-            <TabsContent value="notifications">
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
-                <CardContent className="p-4 sm:p-6">
-                  <NotificationSettings />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Activity Logs Tab */}
-            <TabsContent value="activity-logs">
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
-                <CardContent className="p-4 sm:p-6">
-                  <ActivityLogs />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Orders Tab */}
-            <TabsContent value="orders" className="space-y-6">
-              {/* Filters Section */}
-              <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
-                <CardContent className="p-4 sm:p-6">
-                  <div className="flex flex-col gap-4">
-                    <div className="relative">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                      <Input
-                        placeholder="Search orders by name, email, phone, ID, or transaction..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-12 h-12 text-base bg-background/50 border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                      <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="h-11 bg-background/50 border-border/50 rounded-xl">
-                          <div className="flex items-center gap-2">
-                            <Filter className="w-4 h-4 text-muted-foreground" />
-                            <SelectValue placeholder="Status" />
-                          </div>
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl">
-                          {ORDER_STATUSES.map((status) => (
-                            <SelectItem key={status.value} value={status.value} className="rounded-lg">
-                              {status.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-                        <SelectTrigger className="h-11 bg-background/50 border-border/50 rounded-xl">
-                          <div className="flex items-center gap-2">
-                            <CreditCard className="w-4 h-4 text-muted-foreground" />
-                            <SelectValue placeholder="Payment" />
-                          </div>
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl">
-                          {PAYMENT_FILTERS.map((payment) => (
-                            <SelectItem key={payment.value} value={payment.value} className="rounded-lg">
-                              {payment.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select value={dateFilter} onValueChange={setDateFilter}>
-                        <SelectTrigger className="h-11 bg-background/50 border-border/50 rounded-xl">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-muted-foreground" />
-                            <SelectValue placeholder="Date" />
-                          </div>
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl">
-                          <SelectItem value="all" className="rounded-lg">All Time</SelectItem>
-                          <SelectItem value="today" className="rounded-lg">Today</SelectItem>
-                          <SelectItem value="week" className="rounded-lg">This Week</SelectItem>
-                          <SelectItem value="month" className="rounded-lg">This Month</SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      {hasActiveFilters && (
-                        <Button 
-                          variant="ghost" 
-                          onClick={clearFilters} 
-                          className="h-11 gap-2 text-muted-foreground hover:text-foreground rounded-xl border border-dashed border-border/50"
-                        >
-                          <X className="w-4 h-4" />
-                          Clear
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Orders List */}
-              {filteredOrders.length === 0 ? (
-                <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
-                  <CardContent className="flex flex-col items-center justify-center py-16 sm:py-24">
-                    <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6">
-                      <Package className="w-10 h-10 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-xl sm:text-2xl font-display text-foreground mb-2">
-                      {hasActiveFilters ? "No Matching Orders" : "No Orders Yet"}
-                    </h3>
-                    <p className="text-muted-foreground text-center max-w-md">
-                      {hasActiveFilters 
-                        ? "Try adjusting your filters to see more orders." 
-                        : "Orders will appear here when customers place them."}
-                    </p>
-                    {hasActiveFilters && (
-                      <Button variant="outline" onClick={clearFilters} className="mt-6 rounded-full">
-                        Clear Filters
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-4">
-                  {filteredOrders.map((order) => (
-                    <Card key={order.id} className="bg-card/80 backdrop-blur-sm border-border/50 overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-                      <CardHeader className="bg-gradient-to-r from-muted/50 to-transparent border-b border-border/50 p-4 sm:p-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <Package className="w-5 h-5 text-primary" />
-                              </div>
-                              <div>
-                                <CardTitle className="font-display text-lg">
-                                  #{order.id.slice(0, 8)}
-                                </CardTitle>
-                                <p className="text-xs text-muted-foreground flex items-center gap-1 sm:hidden">
-                                  <Calendar className="w-3 h-3" />
-                                  {formatDate(order.created_at)}
-                                </p>
-                              </div>
-                            </div>
-                            <Badge className={`${getStatusColor(order.status)} rounded-full px-3`}>
-                              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                            </Badge>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-3">
-                            <Select
-                              value={order.status}
-                              onValueChange={(value) => updateOrderStatus(order.id, value)}
-                              disabled={updatingStatus === order.id}
-                            >
-                              <SelectTrigger className="w-[140px] sm:w-[160px] h-10 rounded-xl bg-background/50">
-                                {updatingStatus === order.id ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <SelectValue placeholder="Update status" />
-                                )}
-                              </SelectTrigger>
-                              <SelectContent className="rounded-xl">
-                                {ORDER_STATUSES.filter(s => s.value !== 'all').map((status) => (
-                                  <SelectItem key={status.value} value={status.value} className="rounded-lg">
-                                    {status.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-full">
-                              <Calendar className="w-4 h-4" />
-                              {formatDate(order.created_at)}
-                            </div>
-                          </div>
-                        </div>
-                      </CardHeader>
-
-                      <CardContent className="p-4 sm:p-6">
-                        <div className="grid lg:grid-cols-2 gap-6">
-                          {/* Customer Info */}
-                          <div className="space-y-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                                <span className="text-lg">👤</span>
-                              </div>
-                              <h4 className="font-semibold text-foreground">Customer Details</h4>
-                            </div>
-                            <div className="space-y-3 pl-[52px]">
-                              <p className="text-foreground font-medium text-lg">{order.customer_name}</p>
-                              <div className="grid gap-2">
-                                <a 
-                                  href={`tel:${order.customer_phone}`} 
-                                  className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors group"
-                                >
-                                  <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                                    <Phone className="w-4 h-4" />
-                                  </div>
-                                  {order.customer_phone}
-                                </a>
-                                <a 
-                                  href={`mailto:${order.customer_email}`} 
-                                  className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors group"
-                                >
-                                  <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                                    <Mail className="w-4 h-4" />
-                                  </div>
-                                  <span className="truncate">{order.customer_email}</span>
-                                </a>
-                                <div className="flex items-start gap-3 text-muted-foreground">
-                                  <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center flex-shrink-0">
-                                    <MapPin className="w-4 h-4" />
-                                  </div>
-                                  <span className="break-words">{order.customer_address}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Payment Info */}
-                            <div className="pt-4 border-t border-border/50">
-                              <div className="flex items-center gap-3 mb-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                  order.payment_method === 'bkash' ? 'bg-pink-500/10' : 
-                                  order.payment_method === 'nagad' ? 'bg-orange-500/10' : 'bg-green-500/10'
-                                }`}>
-                                  {order.payment_method === 'bkash' ? (
-                                    <Smartphone className="w-5 h-5 text-pink-500" />
-                                  ) : order.payment_method === 'nagad' ? (
-                                    <Smartphone className="w-5 h-5 text-orange-500" />
-                                  ) : (
-                                    <Banknote className="w-5 h-5 text-green-500" />
-                                  )}
-                                </div>
-                                <div>
-                                  <p className="text-sm text-muted-foreground">Payment Method</p>
-                                  <p className="font-medium capitalize">
-                                    {order.payment_method === 'cod' ? 'Cash on Delivery' : order.payment_method || 'COD'}
-                                  </p>
-                                </div>
-                              </div>
-                              {order.transaction_id && (
-                                <div className="flex items-center gap-3 pl-[52px]">
-                                  <span className="text-sm text-muted-foreground">TxID:</span>
-                                  <code className="font-mono text-xs bg-muted/50 px-3 py-1.5 rounded-full truncate max-w-[180px] sm:max-w-none">
-                                    {order.transaction_id}
-                                  </code>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Order Items */}
-                          <div className="space-y-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
-                                <span className="text-lg">🛍️</span>
-                              </div>
-                              <h4 className="font-semibold text-foreground">Order Items</h4>
-                            </div>
-                            <div className="space-y-3 pl-[52px]">
-                              {order.items.map((item, idx) => {
-                                const normalized = normalizeOrderItem(item);
-                                return (
-                                  <div key={idx} className="flex justify-between items-center py-2 border-b border-border/30 last:border-0">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-foreground">{normalized.name}</span>
-                                      <Badge variant="secondary" className="rounded-full text-xs">
-                                        x{normalized.quantity}
-                                      </Badge>
-                                    </div>
-                                    <span className="text-primary font-semibold">৳{normalized.price.toLocaleString()}</span>
-                                  </div>
-                                );
-                              })}
-                              <div className="pt-4 flex justify-between items-center bg-gradient-to-r from-primary/5 to-transparent -mx-4 px-4 py-3 rounded-xl">
-                                <span className="font-semibold text-foreground">Total Amount</span>
-                                <span className="font-display text-2xl text-primary">৳{order.total_amount.toLocaleString()}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-border/50">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openWhatsApp(order)}
-                            className="gap-2 rounded-full hover:bg-green-500/10 hover:text-green-600 hover:border-green-500/50 transition-all"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                            WhatsApp
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(`tel:${order.customer_phone}`, '_self')}
-                            className="gap-2 rounded-full hover:bg-blue-500/10 hover:text-blue-600 hover:border-blue-500/50 transition-all"
-                          >
-                            <Phone className="w-4 h-4" />
-                            Call
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setOrderToDelete(order)}
-                            disabled={deletingOrder === order.id}
-                            className="gap-2 rounded-full text-destructive hover:text-destructive hover:bg-destructive/10 hover:border-destructive/50 ml-auto transition-all"
-                          >
-                            {deletingOrder === order.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-4 h-4" />
-                            )}
-                            Delete
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Statistics Tab */}
-            <TabsContent value="statistics">
-              <OrderStatistics orders={orders} />
-            </TabsContent>
-
-            {/* Messages Tab */}
-            <TabsContent value="messages">
-              <ContactMessages />
-            </TabsContent>
-          </Tabs>
+          {/* Content Area */}
+          <div className="p-4 sm:p-6 lg:p-8">
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
+              <CardContent className="p-4 sm:p-6">
+                {renderContent()}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 

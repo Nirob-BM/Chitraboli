@@ -311,6 +311,48 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_riders: {
+        Row: {
+          created_at: string
+          current_status: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          license_number: string | null
+          name: string
+          phone: string
+          profile_image_url: string | null
+          updated_at: string
+          vehicle_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          current_status?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          license_number?: string | null
+          name: string
+          phone: string
+          profile_image_url?: string | null
+          updated_at?: string
+          vehicle_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          current_status?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          license_number?: string | null
+          name?: string
+          phone?: string
+          profile_image_url?: string | null
+          updated_at?: string
+          vehicle_type?: string | null
+        }
+        Relationships: []
+      }
       media_library: {
         Row: {
           alt_text: string | null
@@ -438,14 +480,17 @@ export type Database = {
       }
       orders: {
         Row: {
+          assigned_rider_id: string | null
           created_at: string
           customer_address: string
           customer_email: string
           customer_name: string
           customer_phone: string
+          delivery_notes: string | null
           id: string
           items: Json
           payment_method: string | null
+          rider_assigned_at: string | null
           session_id: string | null
           status: string
           total_amount: number
@@ -453,14 +498,17 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          assigned_rider_id?: string | null
           created_at?: string
           customer_address: string
           customer_email: string
           customer_name: string
           customer_phone: string
+          delivery_notes?: string | null
           id?: string
           items: Json
           payment_method?: string | null
+          rider_assigned_at?: string | null
           session_id?: string | null
           status?: string
           total_amount: number
@@ -468,21 +516,32 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          assigned_rider_id?: string | null
           created_at?: string
           customer_address?: string
           customer_email?: string
           customer_name?: string
           customer_phone?: string
+          delivery_notes?: string | null
           id?: string
           items?: Json
           payment_method?: string | null
+          rider_assigned_at?: string | null
           session_id?: string | null
           status?: string
           total_amount?: number
           transaction_id?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_assigned_rider_id_fkey"
+            columns: ["assigned_rider_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_riders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       page_content: {
         Row: {
@@ -606,6 +665,57 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      rider_deliveries: {
+        Row: {
+          assigned_at: string
+          created_at: string
+          delivered_at: string | null
+          id: string
+          notes: string | null
+          order_id: string
+          picked_up_at: string | null
+          rider_id: string
+          status: string | null
+        }
+        Insert: {
+          assigned_at?: string
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          picked_up_at?: string | null
+          rider_id: string
+          status?: string | null
+        }
+        Update: {
+          assigned_at?: string
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          picked_up_at?: string | null
+          rider_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rider_deliveries_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rider_deliveries_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_riders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       site_settings: {
         Row: {
