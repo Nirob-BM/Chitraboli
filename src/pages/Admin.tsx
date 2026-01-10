@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Package, Phone, Mail, MapPin, Calendar, ExternalLink, LogOut, Loader2, 
-  CreditCard, Smartphone, Banknote, Search, Filter, Trash2, X, Bell
+  CreditCard, Smartphone, Banknote, Search, Filter, Trash2, X, Bell, Bike, User as UserIcon
 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { toast } from "sonner";
@@ -39,6 +39,7 @@ import { BackupManagement } from "@/components/admin/BackupManagement";
 import { RiderManagement } from "@/components/admin/RiderManagement";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { useOrderNotifications } from "@/hooks/useOrderNotifications";
+import { useDeliveryRiders } from "@/hooks/useDeliveryRiders";
 
 interface OrderItem {
   name?: string;
@@ -69,6 +70,9 @@ interface Order {
   created_at: string;
   payment_method?: string;
   transaction_id?: string;
+  assigned_rider_id?: string | null;
+  rider_assigned_at?: string | null;
+  delivery_notes?: string | null;
 }
 
 const ORDER_STATUSES = [
@@ -103,6 +107,9 @@ const Admin = () => {
 
   // Notification hook
   const { newOrderCount, clearNotifications } = useOrderNotifications(isAdmin);
+  
+  // Rider management hook
+  const { riders, assignRiderToOrder, unassignRider, refetch: refetchRiders } = useDeliveryRiders();
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState("");
@@ -270,6 +277,33 @@ const Admin = () => {
     } finally {
       setDeletingOrder(null);
       setOrderToDelete(null);
+    }
+  };
+
+  const handleAssignRider = async (orderId: string, riderId: string | null) => {
+    try {
+      if (riderId === null || riderId === 'unassign') {
+        const result = await unassignRider(orderId);
+        if (result.success) {
+          toast.success("Rider unassigned successfully");
+          fetchOrders();
+          refetchRiders();
+        } else {
+          toast.error(result.error || "Failed to unassign rider");
+        }
+      } else {
+        const result = await assignRiderToOrder(orderId, riderId);
+        if (result.success) {
+          const rider = riders.find(r => r.id === riderId);
+          toast.success(`Assigned ${rider?.name || 'rider'} to order`);
+          fetchOrders();
+          refetchRiders();
+        } else {
+          toast.error(result.error || "Failed to assign rider");
+        }
+      }
+    } catch (error: any) {
+      toast.error(`Error: ${error.message}`);
     }
   };
 
@@ -639,6 +673,56 @@ const Admin = () => {
                         <span className="font-display text-2xl text-primary">৳{order.total_amount.toLocaleString()}</span>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* Rider Assignment */}
+                <div className="mt-6 pt-4 border-t border-border/50">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                        <Bike className="w-5 h-5 text-emerald-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Delivery Rider</p>
+                        {order.assigned_rider_id ? (
+                          <p className="font-medium text-foreground">
+                            {riders.find(r => r.id === order.assigned_rider_id)?.name || 'Unknown Rider'}
+                          </p>
+                        ) : (
+                          <p className="text-muted-foreground">Not assigned</p>
+                        )}
+                      </div>
+                    </div>
+                    <Select
+                      value={order.assigned_rider_id || "unassigned"}
+                      onValueChange={(value) => handleAssignRider(order.id, value === "unassigned" ? null : value)}
+                    >
+                      <SelectTrigger className="w-[180px] h-10 rounded-xl bg-background/50">
+                        <SelectValue placeholder="Assign rider" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="unassigned" className="rounded-lg">
+                          Not assigned
+                        </SelectItem>
+                        {riders.filter(r => r.is_active).map((rider) => (
+                          <SelectItem key={rider.id} value={rider.id} className="rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <span>{rider.name}</span>
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                rider.current_status === 'available' 
+                                  ? 'bg-green-500/20 text-green-400' 
+                                  : rider.current_status === 'on_delivery' 
+                                    ? 'bg-blue-500/20 text-blue-400' 
+                                    : 'bg-muted text-muted-foreground'
+                              }`}>
+                                {rider.current_status === 'available' ? '✓' : rider.current_status === 'on_delivery' ? '🚴' : '○'}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
