@@ -314,11 +314,14 @@ export type Database = {
       delivery_riders: {
         Row: {
           created_at: string
+          current_latitude: number | null
+          current_longitude: number | null
           current_status: string | null
           email: string | null
           id: string
           is_active: boolean | null
           license_number: string | null
+          location_updated_at: string | null
           name: string
           phone: string
           profile_image_url: string | null
@@ -327,11 +330,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          current_latitude?: number | null
+          current_longitude?: number | null
           current_status?: string | null
           email?: string | null
           id?: string
           is_active?: boolean | null
           license_number?: string | null
+          location_updated_at?: string | null
           name: string
           phone: string
           profile_image_url?: string | null
@@ -340,11 +346,14 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          current_latitude?: number | null
+          current_longitude?: number | null
           current_status?: string | null
           email?: string | null
           id?: string
           is_active?: boolean | null
           license_number?: string | null
+          location_updated_at?: string | null
           name?: string
           phone?: string
           profile_image_url?: string | null
