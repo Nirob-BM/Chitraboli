@@ -793,6 +793,10 @@ export type Database = {
           customer_name: string
           id: string
           items: Json
+          rider_assigned_at: string
+          rider_name: string
+          rider_phone: string
+          rider_vehicle_type: string
           status: string
           total_amount: number
         }[]

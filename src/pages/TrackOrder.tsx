@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Package, Truck, CheckCircle, XCircle, Clock, AlertCircle, ShieldCheck, History, ArrowRight } from "lucide-react";
+import { Search, Package, Truck, CheckCircle, XCircle, Clock, AlertCircle, ShieldCheck, History, ArrowRight, Phone, User, Bike, Car } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface OrderItem {
@@ -27,6 +27,10 @@ interface Order {
   total_amount: number;
   status: string;
   created_at: string;
+  rider_name: string | null;
+  rider_phone: string | null;
+  rider_vehicle_type: string | null;
+  rider_assigned_at: string | null;
 }
 
 interface RecentOrder {
@@ -144,7 +148,11 @@ const TrackOrder = () => {
           status: orderData.status,
           created_at: orderData.created_at,
           total_amount: orderData.total_amount,
-          items: Array.isArray(orderData.items) ? (orderData.items as unknown as OrderItem[]) : []
+          items: Array.isArray(orderData.items) ? (orderData.items as unknown as OrderItem[]) : [],
+          rider_name: orderData.rider_name,
+          rider_phone: orderData.rider_phone,
+          rider_vehicle_type: orderData.rider_vehicle_type,
+          rider_assigned_at: orderData.rider_assigned_at
         });
       } else {
         setOrder(null);
@@ -347,6 +355,53 @@ const TrackOrder = () => {
                       )}
                     </CardContent>
                   </Card>
+
+                  {/* Delivery Rider Info */}
+                  {order.rider_name && (order.status === 'shipped' || order.status === 'confirmed') && (
+                    <Card className="border-primary/30 bg-primary/5">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Truck className="w-5 h-5 text-primary" />
+                          Delivery Rider
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center">
+                            {order.rider_vehicle_type === 'motorcycle' ? (
+                              <Bike className="w-7 h-7 text-primary" />
+                            ) : order.rider_vehicle_type === 'car' ? (
+                              <Car className="w-7 h-7 text-primary" />
+                            ) : (
+                              <User className="w-7 h-7 text-primary" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-lg">{order.rider_name}</p>
+                            <p className="text-sm text-muted-foreground capitalize">
+                              {order.rider_vehicle_type || 'Delivery Partner'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {order.rider_phone && (
+                          <a 
+                            href={`tel:${order.rider_phone}`}
+                            className="mt-4 flex items-center justify-center gap-2 w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                          >
+                            <Phone className="w-4 h-4" />
+                            Call Rider: {order.rider_phone}
+                          </a>
+                        )}
+                        
+                        {order.rider_assigned_at && (
+                          <p className="mt-3 text-xs text-center text-muted-foreground">
+                            Assigned on {formatDate(order.rider_assigned_at)}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
 
                   {/* Order Details */}
                   <Card>
