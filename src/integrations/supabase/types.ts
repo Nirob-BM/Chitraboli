@@ -803,6 +803,7 @@ export type Database = {
           id: string
           items: Json
           rider_assigned_at: string
+          rider_id: string
           rider_name: string
           rider_phone: string
           rider_vehicle_type: string

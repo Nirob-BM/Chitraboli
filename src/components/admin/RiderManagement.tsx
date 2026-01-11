@@ -6,9 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Bike, Truck, Phone, Mail, Edit, Trash2, Loader2, User } from "lucide-react";
+import { Plus, Bike, Truck, Phone, Mail, Edit, Trash2, Loader2, User, MapPin, Navigation } from "lucide-react";
 import { toast } from "sonner";
 
 const VEHICLE_TYPES = [
@@ -24,11 +24,13 @@ const STATUS_OPTIONS = [
 ];
 
 export const RiderManagement = () => {
-  const { riders, loading, addRider, updateRider, deleteRider, refetch } = useDeliveryRiders();
+  const { riders, loading, addRider, updateRider, deleteRider, updateRiderLocation, refetch } = useDeliveryRiders();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingRider, setEditingRider] = useState<DeliveryRider | null>(null);
   const [riderToDelete, setRiderToDelete] = useState<DeliveryRider | null>(null);
+  const [locationRider, setLocationRider] = useState<DeliveryRider | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [locationData, setLocationData] = useState({ latitude: "", longitude: "" });
   
   const [formData, setFormData] = useState({
     name: "",
@@ -127,6 +129,60 @@ export const RiderManagement = () => {
       current_status: rider.current_status,
     });
     setEditingRider(rider);
+  };
+
+  const openLocationDialog = (rider: DeliveryRider) => {
+    setLocationData({ latitude: "", longitude: "" });
+    setLocationRider(rider);
+  };
+
+  const handleUpdateLocation = async () => {
+    if (!locationRider) return;
+    
+    const lat = parseFloat(locationData.latitude);
+    const lng = parseFloat(locationData.longitude);
+    
+    if (isNaN(lat) || isNaN(lng)) {
+      toast.error("Please enter valid coordinates");
+      return;
+    }
+
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      toast.error("Invalid coordinates range");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const result = await updateRiderLocation(locationRider.id, lat, lng);
+    
+    if (result.success) {
+      toast.success("Location updated successfully");
+      setLocationRider(null);
+      refetch();
+    } else {
+      toast.error(result.error || "Failed to update location");
+    }
+    setIsSubmitting(false);
+  };
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocationData({
+          latitude: position.coords.latitude.toFixed(6),
+          longitude: position.coords.longitude.toFixed(6)
+        });
+        toast.success("Location captured!");
+      },
+      (error) => {
+        toast.error("Unable to get location: " + error.message);
+      }
+    );
   };
 
   const getStatusBadge = (status: string) => {
@@ -310,6 +366,15 @@ export const RiderManagement = () => {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => openLocationDialog(rider)}
+                  className="text-primary hover:bg-primary/10"
+                  title="Update Location"
+                >
+                  <MapPin className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => openEditDialog(rider)}
                   className="flex-1"
                 >
@@ -436,6 +501,82 @@ export const RiderManagement = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Location Update Dialog */}
+      <Dialog open={!!locationRider} onOpenChange={(open) => !open && setLocationRider(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-primary" />
+              Update Rider Location
+            </DialogTitle>
+            <DialogDescription>
+              Update live location for {locationRider?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Button 
+              variant="outline" 
+              onClick={useCurrentLocation} 
+              className="w-full gap-2"
+            >
+              <Navigation className="w-4 h-4" />
+              Use Current Location
+            </Button>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">or enter manually</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="latitude">Latitude</Label>
+                <Input
+                  id="latitude"
+                  type="number"
+                  step="any"
+                  placeholder="23.8103"
+                  value={locationData.latitude}
+                  onChange={(e) => setLocationData({ ...locationData, latitude: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="longitude">Longitude</Label>
+                <Input
+                  id="longitude"
+                  type="number"
+                  step="any"
+                  placeholder="90.4125"
+                  value={locationData.longitude}
+                  onChange={(e) => setLocationData({ ...locationData, longitude: e.target.value })}
+                />
+              </div>
+            </div>
+            
+            <p className="text-xs text-muted-foreground">
+              Location will be visible to customers tracking their orders in real-time.
+            </p>
+            
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" onClick={() => setLocationRider(null)} className="flex-1">
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleUpdateLocation} 
+                disabled={isSubmitting || !locationData.latitude || !locationData.longitude} 
+                className="flex-1"
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Update Location"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

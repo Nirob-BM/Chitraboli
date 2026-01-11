@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Package, Truck, CheckCircle, XCircle, Clock, AlertCircle, ShieldCheck, History, ArrowRight, Phone, User, Bike, Car } from "lucide-react";
+import { Search, Package, Truck, CheckCircle, XCircle, Clock, AlertCircle, ShieldCheck, History, ArrowRight, Phone, User, Bike, Car, MapPin } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Lazy load the map component
+const DeliveryMap = lazy(() => import("@/components/DeliveryMap"));
 
 interface OrderItem {
   name?: string;
@@ -27,6 +31,7 @@ interface Order {
   total_amount: number;
   status: string;
   created_at: string;
+  rider_id: string | null;
   rider_name: string | null;
   rider_phone: string | null;
   rider_vehicle_type: string | null;
@@ -149,6 +154,7 @@ const TrackOrder = () => {
           created_at: orderData.created_at,
           total_amount: orderData.total_amount,
           items: Array.isArray(orderData.items) ? (orderData.items as unknown as OrderItem[]) : [],
+          rider_id: orderData.rider_id,
           rider_name: orderData.rider_name,
           rider_phone: orderData.rider_phone,
           rider_vehicle_type: orderData.rider_vehicle_type,
@@ -356,7 +362,7 @@ const TrackOrder = () => {
                     </CardContent>
                   </Card>
 
-                  {/* Delivery Rider Info */}
+                  {/* Delivery Rider Info with Live Map */}
                   {order.rider_name && (order.status === 'shipped' || order.status === 'confirmed') && (
                     <Card className="border-primary/30 bg-primary/5">
                       <CardHeader>
@@ -365,7 +371,7 @@ const TrackOrder = () => {
                           Delivery Rider
                         </CardTitle>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="space-y-4">
                         <div className="flex items-center gap-4">
                           <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center">
                             {order.rider_vehicle_type === 'motorcycle' ? (
@@ -387,15 +393,33 @@ const TrackOrder = () => {
                         {order.rider_phone && (
                           <a 
                             href={`tel:${order.rider_phone}`}
-                            className="mt-4 flex items-center justify-center gap-2 w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                            className="flex items-center justify-center gap-2 w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
                           >
                             <Phone className="w-4 h-4" />
                             Call Rider: {order.rider_phone}
                           </a>
                         )}
+
+                        {/* Live Tracking Map */}
+                        {order.status === 'shipped' && order.rider_id && (
+                          <div className="pt-2">
+                            <div className="flex items-center gap-2 mb-3">
+                              <MapPin className="w-4 h-4 text-primary" />
+                              <span className="text-sm font-medium">Live Location</span>
+                            </div>
+                            <Suspense fallback={
+                              <Skeleton className="w-full h-64 rounded-lg" />
+                            }>
+                              <DeliveryMap 
+                                riderId={order.rider_id} 
+                                riderName={order.rider_name || 'Delivery Rider'}
+                              />
+                            </Suspense>
+                          </div>
+                        )}
                         
                         {order.rider_assigned_at && (
-                          <p className="mt-3 text-xs text-center text-muted-foreground">
+                          <p className="text-xs text-center text-muted-foreground">
                             Assigned on {formatDate(order.rider_assigned_at)}
                           </p>
                         )}

@@ -164,6 +164,25 @@ export const useDeliveryRiders = () => {
     return riders.filter(r => r.is_active && r.current_status === 'available');
   };
 
+  const updateRiderLocation = async (riderId: string, latitude: number, longitude: number) => {
+    try {
+      const { error } = await supabase
+        .from("delivery_riders")
+        .update({ 
+          current_latitude: latitude,
+          current_longitude: longitude,
+          location_updated_at: new Date().toISOString()
+        })
+        .eq("id", riderId);
+
+      if (error) throw error;
+      return { success: true };
+    } catch (err: any) {
+      console.error("Error updating rider location:", err);
+      return { success: false, error: err.message };
+    }
+  };
+
   return {
     riders,
     loading,
@@ -174,6 +193,7 @@ export const useDeliveryRiders = () => {
     assignRiderToOrder,
     unassignRider,
     getAvailableRiders,
+    updateRiderLocation,
     refetch: fetchRiders,
   };
 };
