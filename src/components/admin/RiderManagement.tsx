@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDeliveryRiders, DeliveryRider } from "@/hooks/useDeliveryRiders";
+import { useRiderLocationSimulation } from "@/hooks/useRiderLocationSimulation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Bike, Truck, Phone, Mail, Edit, Trash2, Loader2, User, MapPin, Navigation } from "lucide-react";
+import { Plus, Bike, Truck, Phone, Mail, Edit, Trash2, Loader2, User, MapPin, Navigation, Play, Square, Route } from "lucide-react";
 import { toast } from "sonner";
 
 const VEHICLE_TYPES = [
@@ -25,12 +26,20 @@ const STATUS_OPTIONS = [
 
 export const RiderManagement = () => {
   const { riders, loading, addRider, updateRider, deleteRider, updateRiderLocation, refetch } = useDeliveryRiders();
+  const { startSimulation, stopSimulation, stopAllSimulations, isSimulating, getSimulationState } = useRiderLocationSimulation();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingRider, setEditingRider] = useState<DeliveryRider | null>(null);
   const [riderToDelete, setRiderToDelete] = useState<DeliveryRider | null>(null);
   const [locationRider, setLocationRider] = useState<DeliveryRider | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [locationData, setLocationData] = useState({ latitude: "", longitude: "" });
+
+  // Clean up simulations on unmount
+  useEffect(() => {
+    return () => {
+      stopAllSimulations();
+    };
+  }, [stopAllSimulations]);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -362,7 +371,7 @@ export const RiderManagement = () => {
                 )}
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button
                   variant="outline"
                   size="sm"
@@ -372,6 +381,35 @@ export const RiderManagement = () => {
                 >
                   <MapPin className="w-4 h-4" />
                 </Button>
+                {isSimulating(rider.id) ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      stopSimulation(rider.id);
+                      toast.success(`Stopped simulation for ${rider.name}`);
+                    }}
+                    className="text-amber-500 hover:bg-amber-500/10 border-amber-500/30"
+                    title="Stop Simulation"
+                  >
+                    <Square className="w-4 h-4 mr-1" />
+                    Stop
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      startSimulation(rider.id, 2000);
+                      toast.success(`Started simulation for ${rider.name}`);
+                    }}
+                    className="text-green-500 hover:bg-green-500/10 border-green-500/30"
+                    title="Simulate Movement"
+                  >
+                    <Play className="w-4 h-4 mr-1" />
+                    Simulate
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -390,6 +428,19 @@ export const RiderManagement = () => {
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
+
+              {/* Simulation Status Indicator */}
+              {isSimulating(rider.id) && (
+                <div className="mt-3 p-2 rounded-lg bg-green-500/10 border border-green-500/30">
+                  <div className="flex items-center gap-2 text-green-400 text-sm">
+                    <Route className="w-4 h-4 animate-pulse" />
+                    <span>Simulating delivery route...</span>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      Step {(getSimulationState(rider.id)?.currentStep || 0) + 1}/{getSimulationState(rider.id)?.totalSteps || 0}
+                    </span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
