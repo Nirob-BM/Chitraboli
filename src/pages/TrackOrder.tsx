@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Package, Truck, CheckCircle, XCircle, Clock, AlertCircle, ShieldCheck, History, ArrowRight, Phone, User, Bike, Car, MapPin } from "lucide-react";
+import { Search, Package, Truck, CheckCircle, XCircle, Clock, AlertCircle, ShieldCheck, History, ArrowRight, Phone, User, Bike, Car, MapPin, Timer } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useDeliveryNotifications } from "@/hooks/useDeliveryNotifications";
 
 // Lazy load the map component
 const DeliveryMap = lazy(() => import("@/components/DeliveryMap"));
@@ -68,6 +69,31 @@ const TrackOrder = () => {
   const [searched, setSearched] = useState(false);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(false);
+  const [etaMinutes, setETAMinutes] = useState<number | null>(null);
+  const [distanceKm, setDistanceKm] = useState<number | null>(null);
+
+  const { sendNearbyNotification } = useDeliveryNotifications();
+
+  // Handle ETA updates from map
+  const handleETAUpdate = useCallback((minutes: number, distance: number) => {
+    setETAMinutes(minutes);
+    setDistanceKm(distance);
+
+    // Send notification if rider is near (within 500m)
+    if (order && distance <= 0.5) {
+      sendNearbyNotification(
+        {
+          orderId: order.id,
+          customerPhone: phoneNumber,
+          customerName: order.customer_name,
+          riderName: order.rider_name || "Delivery Rider",
+          thresholdKm: 0.5,
+        },
+        distance,
+        minutes
+      );
+    }
+  }, [order, phoneNumber, sendNearbyNotification]);
 
   // Load order history when phone number has 11 digits (Bangladesh format)
   useEffect(() => {
@@ -400,6 +426,26 @@ const TrackOrder = () => {
                           </a>
                         )}
 
+                        {/* ETA Display */}
+                        {etaMinutes !== null && distanceKm !== null && (
+                          <div className="flex items-center justify-center gap-4 p-3 bg-primary/10 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <Timer className="w-5 h-5 text-primary" />
+                              <div>
+                                <p className="text-lg font-bold text-primary">
+                                  {etaMinutes < 60 ? `${etaMinutes} min` : `${Math.floor(etaMinutes / 60)}h ${etaMinutes % 60}m`}
+                                </p>
+                                <p className="text-xs text-muted-foreground">Estimated arrival</p>
+                              </div>
+                            </div>
+                            <div className="w-px h-10 bg-border" />
+                            <div className="text-center">
+                              <p className="text-lg font-bold text-foreground">{distanceKm} km</p>
+                              <p className="text-xs text-muted-foreground">Distance</p>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Live Tracking Map */}
                         {order.status === 'shipped' && order.rider_id && (
                           <div className="pt-2">
@@ -413,6 +459,8 @@ const TrackOrder = () => {
                               <DeliveryMap 
                                 riderId={order.rider_id} 
                                 riderName={order.rider_name || 'Delivery Rider'}
+                                riderVehicleType={order.rider_vehicle_type || 'motorcycle'}
+                                onETAUpdate={handleETAUpdate}
                               />
                             </Suspense>
                           </div>

@@ -215,12 +215,27 @@ export const RiderManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-xl font-display text-foreground">Delivery Riders</h2>
           <p className="text-sm text-muted-foreground">Manage your delivery team</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <div className="flex items-center gap-2">
+          {/* Stop All Simulations Button */}
+          {riders.some(r => isSimulating(r.id)) && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                stopAllSimulations();
+                toast.success("All simulations stopped");
+              }}
+              className="text-amber-500 hover:bg-amber-500/10 border-amber-500/30 gap-2"
+            >
+              <Square className="w-4 h-4" />
+              Stop All Simulations
+            </Button>
+          )}
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="w-4 h-4" />
@@ -293,10 +308,11 @@ export const RiderManagement = () => {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="bg-card/50 border-border/50">
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-foreground">{riders.length}</div>
@@ -325,6 +341,14 @@ export const RiderManagement = () => {
               {riders.filter(r => r.current_status === 'offline').length}
             </div>
             <div className="text-sm text-muted-foreground">Offline</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/50 border-amber-500/30">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-amber-400">
+              {riders.filter(r => isSimulating(r.id)).length}
+            </div>
+            <div className="text-sm text-muted-foreground">Simulating</div>
           </CardContent>
         </Card>
       </div>

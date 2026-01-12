@@ -1,14 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { MapPin, RefreshCw, Clock, Navigation } from 'lucide-react';
+import { useETACalculation } from '@/hooks/useETACalculation';
 
 interface DeliveryMapProps {
   riderId: string;
   riderName: string;
-  destinationAddress?: string;
+  riderVehicleType?: string;
+  destinationLat?: number;
+  destinationLng?: number;
+  onETAUpdate?: (etaMinutes: number, distanceKm: number) => void;
 }
 
 interface RiderLocation {
@@ -22,13 +25,43 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
 // Default location (Dhaka, Bangladesh)
 const DEFAULT_LOCATION = { lat: 23.8103, lng: 90.4125 };
 
-const DeliveryMap: React.FC<DeliveryMapProps> = ({ riderId, riderName, destinationAddress }) => {
+const DeliveryMap: React.FC<DeliveryMapProps> = ({ 
+  riderId, 
+  riderName, 
+  riderVehicleType = 'motorcycle',
+  destinationLat,
+  destinationLng,
+  onETAUpdate
+}) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
+  const destinationMarker = useRef<mapboxgl.Marker | null>(null);
   const [riderLocation, setRiderLocation] = useState<RiderLocation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { calculateETA, formatArrivalTime, isNearDestination } = useETACalculation();
+
+  // Calculate ETA whenever rider location changes
+  const etaInfo = useMemo(() => {
+    if (!riderLocation || !destinationLat || !destinationLng) return null;
+    
+    return calculateETA(
+      riderLocation.latitude,
+      riderLocation.longitude,
+      destinationLat,
+      destinationLng,
+      riderVehicleType
+    );
+  }, [riderLocation, destinationLat, destinationLng, riderVehicleType, calculateETA]);
+
+  // Notify parent of ETA updates
+  useEffect(() => {
+    if (etaInfo && onETAUpdate) {
+      onETAUpdate(etaInfo.durationMinutes, etaInfo.distanceKm);
+    }
+  }, [etaInfo, onETAUpdate]);
 
   // Fetch initial rider location
   useEffect(() => {
@@ -126,7 +159,7 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({ riderId, riderName, destinati
     // Add fullscreen control
     map.current.addControl(new mapboxgl.FullscreenControl(), 'top-right');
 
-    // Create custom marker element
+    // Create custom marker element for rider
     const markerEl = document.createElement('div');
     markerEl.className = 'rider-marker';
     markerEl.innerHTML = `
@@ -143,7 +176,7 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({ riderId, riderName, destinati
       </div>
     `;
 
-    // Add marker
+    // Add rider marker
     marker.current = new mapboxgl.Marker({ element: markerEl })
       .setLngLat(initialCenter as [number, number])
       .setPopup(
@@ -154,6 +187,37 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({ riderId, riderName, destinati
       )
       .addTo(map.current);
 
+    // Add destination marker if coordinates provided
+    if (destinationLat && destinationLng) {
+      const destMarkerEl = document.createElement('div');
+      destMarkerEl.innerHTML = `
+        <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+        </div>
+      `;
+
+      destinationMarker.current = new mapboxgl.Marker({ element: destMarkerEl })
+        .setLngLat([destinationLng, destinationLat])
+        .setPopup(
+          new mapboxgl.Popup({ offset: 25 }).setHTML(
+            `<div class="font-semibold text-gray-900">Delivery Location</div>`
+          )
+        )
+        .addTo(map.current);
+
+      // Fit bounds to show both markers
+      if (riderLocation) {
+        const bounds = new mapboxgl.LngLatBounds()
+          .extend([riderLocation.longitude, riderLocation.latitude])
+          .extend([destinationLng, destinationLat]);
+        
+        map.current.fitBounds(bounds, { padding: 60, maxZoom: 15 });
+      }
+    }
+
     return () => {
       map.current?.remove();
     };
@@ -163,12 +227,22 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({ riderId, riderName, destinati
   useEffect(() => {
     if (marker.current && map.current && riderLocation) {
       marker.current.setLngLat([riderLocation.longitude, riderLocation.latitude]);
-      map.current.flyTo({
-        center: [riderLocation.longitude, riderLocation.latitude],
-        duration: 1000
-      });
+      
+      // If we have destination, fit bounds, otherwise fly to rider
+      if (destinationLat && destinationLng) {
+        const bounds = new mapboxgl.LngLatBounds()
+          .extend([riderLocation.longitude, riderLocation.latitude])
+          .extend([destinationLng, destinationLat]);
+        
+        map.current.fitBounds(bounds, { padding: 60, maxZoom: 15, duration: 1000 });
+      } else {
+        map.current.flyTo({
+          center: [riderLocation.longitude, riderLocation.latitude],
+          duration: 1000
+        });
+      }
     }
-  }, [riderLocation]);
+  }, [riderLocation, destinationLat, destinationLng]);
 
   const formatLastUpdate = (dateString: string | null) => {
     if (!dateString) return 'Unknown';
@@ -208,6 +282,24 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({ riderId, riderName, destinati
         </div>
       )}
 
+      {/* ETA Display */}
+      {etaInfo && (
+        <div className="absolute top-3 left-3 bg-background/95 backdrop-blur-sm rounded-lg p-2 shadow-lg">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-primary" />
+            <div>
+              <p className="text-sm font-semibold">{etaInfo.formattedETA}</p>
+              <p className="text-xs text-muted-foreground">{etaInfo.distanceKm} km away</p>
+            </div>
+          </div>
+          {isNearDestination(etaInfo.distanceKm, 0.3) && (
+            <div className="mt-1 text-xs text-green-500 font-medium animate-pulse">
+              Rider is almost there!
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Location Info */}
       <div className="absolute bottom-3 left-3 right-3 bg-background/95 backdrop-blur-sm rounded-lg p-3 shadow-lg">
         <div className="flex items-center justify-between">
@@ -215,11 +307,18 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({ riderId, riderName, destinati
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
             <span className="text-sm font-medium">Live Tracking</span>
           </div>
-          {riderLocation?.updatedAt && (
-            <span className="text-xs text-muted-foreground">
-              Updated {formatLastUpdate(riderLocation.updatedAt)}
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {etaInfo && (
+              <span className="text-xs text-muted-foreground">
+                ETA: {formatArrivalTime(etaInfo.arrivalTime)}
+              </span>
+            )}
+            {riderLocation?.updatedAt && (
+              <span className="text-xs text-muted-foreground">
+                Updated {formatLastUpdate(riderLocation.updatedAt)}
+              </span>
+            )}
+          </div>
         </div>
         {!riderLocation && !loading && (
           <p className="text-xs text-muted-foreground mt-1">
