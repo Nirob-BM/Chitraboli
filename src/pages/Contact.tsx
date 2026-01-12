@@ -5,7 +5,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Facebook, Instagram, Mail, Phone, MapPin, Send, Loader2, MessageCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { SEO } from "@/components/SEO";
 import { useRateLimit } from "@/hooks/useRateLimit";
 
@@ -36,18 +35,43 @@ const Contact = () => {
     e.preventDefault();
     setSubmitting(true);
 
-    const result = await executeWithLimit(async () => {
-      const { error } = await supabase
-        .from('contact_messages')
-        .insert({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone || null,
-          subject: formData.subject,
-          message: formData.message
-        });
+    // Get honeypot value (should be empty for real users)
+    const honeypotElement = document.querySelector('input[name="website"]') as HTMLInputElement;
+    const honeypot = honeypotElement?.value || '';
 
-      if (error) throw error;
+    const result = await executeWithLimit(async () => {
+      // Use edge function for server-side rate limiting and validation
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-contact-message`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone || null,
+            subject: formData.subject,
+            message: formData.message,
+            honeypot
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.code === 'RATE_LIMITED') {
+          toast({
+            title: "Too many attempts",
+            description: "Please wait a few minutes before sending another message.",
+            variant: "destructive"
+          });
+          return null;
+        }
+        throw new Error(data.error || 'Failed to send message');
+      }
 
       toast({
         title: "Message Sent!",
@@ -66,7 +90,7 @@ const Contact = () => {
     });
 
     if (result === null) {
-      // Rate limited - already handled by onRateLimitExceeded
+      // Rate limited - already handled
     } else if (!result) {
       toast({
         title: "Error",
@@ -167,6 +191,14 @@ const Contact = () => {
                 Send a Message
               </h2>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Honeypot field - hidden from users, bots will fill it */}
+                <input 
+                  type="text" 
+                  name="website" 
+                  className="hidden" 
+                  tabIndex={-1} 
+                  autoComplete="off" 
+                />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
