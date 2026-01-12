@@ -6,6 +6,35 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Rate limiting configuration
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_MAX = 15; // 15 requests per window (voice is more resource-intensive)
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute window
+
+function isRateLimited(clientId: string): boolean {
+  const now = Date.now();
+  const record = rateLimitStore.get(clientId);
+  
+  if (!record || now > record.resetTime) {
+    rateLimitStore.set(clientId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  
+  if (record.count >= RATE_LIMIT_MAX) return true;
+  record.count++;
+  return false;
+}
+
+// Cleanup old entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of rateLimitStore.entries()) {
+    if (now > value.resetTime) {
+      rateLimitStore.delete(key);
+    }
+  }
+}, 60 * 1000);
+
 // Process base64 in chunks to prevent memory issues
 function processBase64Chunks(base64String: string, chunkSize = 32768) {
   const chunks: Uint8Array[] = [];
@@ -42,6 +71,19 @@ serve(async (req) => {
   }
 
   try {
+    // Rate limiting check
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+    
+    if (isRateLimited(clientIp)) {
+      console.log(`Rate limit exceeded for IP: ${clientIp}`);
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { audio, language } = await req.json();
     
     if (!audio) {
