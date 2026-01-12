@@ -164,15 +164,36 @@ const TrackOrder = () => {
     setSearched(true);
 
     try {
-      const { data, error } = await supabase.rpc('track_order', {
-        order_id: orderId.trim(),
-        phone_number: phoneNumber.trim()
+      // Use edge function with server-side rate limiting
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/track-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: orderId.trim(),
+          phoneNumber: phoneNumber.trim()
+        })
       });
 
-      if (error) throw error;
+      const result = await response.json();
 
-      if (data && data.length > 0) {
-        const orderData = data[0];
+      if (!response.ok) {
+        if (response.status === 429) {
+          toast({
+            title: "Too many attempts",
+            description: result.error || "Please wait a few minutes before trying again.",
+            variant: "destructive"
+          });
+          setOrder(null);
+          return;
+        }
+        throw new Error(result.error || 'Order not found');
+      }
+
+      if (result.success && result.order) {
+        const orderData = result.order;
         setOrder({
           id: orderData.id,
           customer_name: orderData.customer_name,
@@ -194,7 +215,7 @@ const TrackOrder = () => {
       setOrder(null);
       toast({
         title: "Order not found",
-        description: "No order found with the provided details. Please verify your order ID and phone number.",
+        description: error.message || "No order found with the provided details. Please verify your order ID and phone number.",
         variant: "destructive"
       });
     } finally {

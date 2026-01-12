@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.submit-contact-message]
 verify_jwt = false
+
+[functions.track-order]
+verify_jwt = false

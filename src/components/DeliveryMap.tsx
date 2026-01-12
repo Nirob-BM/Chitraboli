@@ -176,14 +176,25 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({
       </div>
     `;
 
+    // Create safe popup content using DOM (prevents XSS)
+    const createRiderPopupContent = () => {
+      const container = document.createElement('div');
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'font-semibold text-gray-900';
+      nameDiv.textContent = riderName; // Safe - uses textContent, not innerHTML
+      const statusDiv = document.createElement('div');
+      statusDiv.className = 'text-xs text-gray-600';
+      statusDiv.textContent = 'Delivery in progress';
+      container.appendChild(nameDiv);
+      container.appendChild(statusDiv);
+      return container;
+    };
+
     // Add rider marker
     marker.current = new mapboxgl.Marker({ element: markerEl })
       .setLngLat(initialCenter as [number, number])
       .setPopup(
-        new mapboxgl.Popup({ offset: 25 }).setHTML(
-          `<div class="font-semibold text-gray-900">${riderName}</div>
-           <div class="text-xs text-gray-600">Delivery in progress</div>`
-        )
+        new mapboxgl.Popup({ offset: 25 }).setDOMContent(createRiderPopupContent())
       )
       .addTo(map.current);
 
@@ -199,12 +210,15 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({
         </div>
       `;
 
+      // Create safe popup content using DOM (prevents XSS)
+      const destPopupContent = document.createElement('div');
+      destPopupContent.className = 'font-semibold text-gray-900';
+      destPopupContent.textContent = 'Delivery Location';
+
       destinationMarker.current = new mapboxgl.Marker({ element: destMarkerEl })
         .setLngLat([destinationLng, destinationLat])
         .setPopup(
-          new mapboxgl.Popup({ offset: 25 }).setHTML(
-            `<div class="font-semibold text-gray-900">Delivery Location</div>`
-          )
+          new mapboxgl.Popup({ offset: 25 }).setDOMContent(destPopupContent)
         )
         .addTo(map.current);
 
