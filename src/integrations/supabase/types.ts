@@ -362,6 +362,36 @@ export type Database = {
         }
         Relationships: []
       }
+      linked_accounts: {
+        Row: {
+          email: string | null
+          id: string
+          is_primary: boolean | null
+          linked_at: string
+          provider: string
+          provider_account_id: string | null
+          user_id: string
+        }
+        Insert: {
+          email?: string | null
+          id?: string
+          is_primary?: boolean | null
+          linked_at?: string
+          provider: string
+          provider_account_id?: string | null
+          user_id: string
+        }
+        Update: {
+          email?: string | null
+          id?: string
+          is_primary?: boolean | null
+          linked_at?: string
+          provider?: string
+          provider_account_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       media_library: {
         Row: {
           alt_text: string | null
@@ -642,6 +672,42 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_audit_logs: {
+        Row: {
+          action: string
+          changed_by: string | null
+          created_at: string
+          field_changed: string | null
+          id: string
+          ip_address: string | null
+          new_value: string | null
+          old_value: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          changed_by?: string | null
+          created_at?: string
+          field_changed?: string | null
+          id?: string
+          ip_address?: string | null
+          new_value?: string | null
+          old_value?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          changed_by?: string | null
+          created_at?: string
+          field_changed?: string | null
+          id?: string
+          ip_address?: string | null
+          new_value?: string | null
+          old_value?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       reviews: {
         Row: {
           created_at: string
@@ -762,6 +828,129 @@ export type Database = {
         }
         Relationships: []
       }
+      user_addresses: {
+        Row: {
+          address_line1: string
+          address_line2: string | null
+          address_type: string | null
+          city: string
+          country: string | null
+          created_at: string
+          full_name: string
+          id: string
+          is_default: boolean | null
+          label: string
+          phone: string | null
+          postal_code: string | null
+          state: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address_line1: string
+          address_line2?: string | null
+          address_type?: string | null
+          city: string
+          country?: string | null
+          created_at?: string
+          full_name: string
+          id?: string
+          is_default?: boolean | null
+          label?: string
+          phone?: string | null
+          postal_code?: string | null
+          state?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address_line1?: string
+          address_line2?: string | null
+          address_type?: string | null
+          city?: string
+          country?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          is_default?: boolean | null
+          label?: string
+          phone?: string | null
+          postal_code?: string | null
+          state?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          account_status: string | null
+          avatar_url: string | null
+          created_at: string
+          date_of_birth: string | null
+          email: string
+          email_verified: boolean | null
+          full_name: string | null
+          gender: string | null
+          id: string
+          last_login_at: string | null
+          last_login_ip: string | null
+          loyalty_tier: string | null
+          metadata: Json | null
+          notification_preferences: Json | null
+          phone: string | null
+          phone_verified: boolean | null
+          store_credit: number | null
+          two_factor_enabled: boolean | null
+          updated_at: string
+          wallet_balance: number | null
+        }
+        Insert: {
+          account_status?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          email: string
+          email_verified?: boolean | null
+          full_name?: string | null
+          gender?: string | null
+          id: string
+          last_login_at?: string | null
+          last_login_ip?: string | null
+          loyalty_tier?: string | null
+          metadata?: Json | null
+          notification_preferences?: Json | null
+          phone?: string | null
+          phone_verified?: boolean | null
+          store_credit?: number | null
+          two_factor_enabled?: boolean | null
+          updated_at?: string
+          wallet_balance?: number | null
+        }
+        Update: {
+          account_status?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string
+          email_verified?: boolean | null
+          full_name?: string | null
+          gender?: string | null
+          id?: string
+          last_login_at?: string | null
+          last_login_ip?: string | null
+          loyalty_tier?: string | null
+          metadata?: Json | null
+          notification_preferences?: Json | null
+          phone?: string | null
+          phone_verified?: boolean | null
+          store_credit?: number | null
+          two_factor_enabled?: boolean | null
+          updated_at?: string
+          wallet_balance?: number | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -782,6 +971,131 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_sessions: {
+        Row: {
+          browser: string | null
+          created_at: string
+          device_name: string | null
+          device_type: string | null
+          expires_at: string | null
+          id: string
+          ip_address: string | null
+          is_active: boolean | null
+          last_activity: string | null
+          location: string | null
+          os: string | null
+          session_token: string | null
+          user_id: string
+        }
+        Insert: {
+          browser?: string | null
+          created_at?: string
+          device_name?: string | null
+          device_type?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          last_activity?: string | null
+          location?: string | null
+          os?: string | null
+          session_token?: string | null
+          user_id: string
+        }
+        Update: {
+          browser?: string | null
+          created_at?: string
+          device_name?: string | null
+          device_type?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          last_activity?: string | null
+          location?: string | null
+          os?: string | null
+          session_token?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          reference_id: string | null
+          reference_type: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wishlist: {
+        Row: {
+          added_at: string
+          id: string
+          notify_price_drop: boolean | null
+          notify_stock: boolean | null
+          price_at_add: number | null
+          product_id: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          id?: string
+          notify_price_drop?: boolean | null
+          notify_stock?: boolean | null
+          price_at_add?: number | null
+          product_id: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          id?: string
+          notify_price_drop?: boolean | null
+          notify_stock?: boolean | null
+          price_at_add?: number | null
+          product_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlist_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
