@@ -21,34 +21,36 @@ const Auth = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        // Check if user is admin and redirect accordingly
-        checkAdminAndRedirect(session.user.id);
+        // Check user role and redirect accordingly
+        checkRoleAndRedirect(session.user.id);
       }
     });
 
     // Check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        checkAdminAndRedirect(session.user.id);
+        checkRoleAndRedirect(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const checkAdminAndRedirect = async (userId: string) => {
+  const checkRoleAndRedirect = async (userId: string) => {
     const { data } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
       .eq('role', 'admin')
-      .single();
+      .maybeSingle();
     
     if (data) {
+      // User is admin, redirect to admin dashboard
       navigate('/admin');
     } else {
-      toast.error("You don't have admin access");
-      await supabase.auth.signOut();
+      // Regular customer, redirect to profile page
+      navigate('/profile');
+      toast.success("Welcome back!");
     }
   };
 
@@ -95,7 +97,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/admin`
+          redirectTo: `${window.location.origin}/auth`
         }
       });
       if (error) throw error;
@@ -110,11 +112,11 @@ const Auth = () => {
         <Card className="w-full max-w-md bg-card border-border">
           <CardHeader className="text-center">
             <CardTitle className="font-display text-2xl">
-              {isLogin ? "Admin Login" : "Create Account"}
+              {isLogin ? "Welcome Back" : "Create Account"}
             </CardTitle>
             <CardDescription>
               {isLogin 
-                ? "Sign in to access the admin panel" 
+                ? "Sign in to your account" 
                 : "Create an account to get started"}
             </CardDescription>
           </CardHeader>
