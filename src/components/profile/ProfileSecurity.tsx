@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function ProfileSecurity() {
-  const { profile, linkedAccounts, sessions, terminateSession, terminateAllSessions, updateProfile } = useUserProfile();
+  const { profile, linkedAccounts, sessions, terminateSession, terminateAllSessions, updateProfile, user } = useUserProfile();
   const [changingPassword, setChangingPassword] = useState(false);
   const [showPasswords, setShowPasswords] = useState(false);
   const [passwordData, setPasswordData] = useState({
@@ -45,6 +45,8 @@ export function ProfileSecurity() {
     confirm: ""
   });
   const [loading, setLoading] = useState(false);
+  const [linkingProvider, setLinkingProvider] = useState<string | null>(null);
+  const [unlinkingProvider, setUnlinkingProvider] = useState<string | null>(null);
 
   if (!profile) return null;
 
@@ -106,6 +108,119 @@ export function ProfileSecurity() {
         return <Key className="w-5 h-5" />;
     }
   };
+
+  const handleLinkGoogle = async () => {
+    setLinkingProvider('google');
+    try {
+      const { error } = await supabase.auth.linkIdentity({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/profile`
+        }
+      });
+      
+      if (error) throw error;
+    } catch (err: any) {
+      toast.error(err.message || "Failed to link Google account");
+      setLinkingProvider(null);
+    }
+  };
+
+  const handleUnlinkProvider = async (provider: string) => {
+    // Check if this is the last login method
+    if (linkedAccounts.length <= 1) {
+      toast.error("You must keep at least one login method active");
+      return;
+    }
+    
+    setUnlinkingProvider(provider);
+    try {
+      const linkedAccount = linkedAccounts.find(a => a.provider === provider);
+      if (!linkedAccount) {
+        toast.error("Account not found");
+        return;
+      }
+
+      // Remove from linked_accounts table
+      const { error } = await supabase
+        .from('linked_accounts')
+        .delete()
+        .eq('id', linkedAccount.id);
+      
+      if (error) throw error;
+      
+      toast.success(`${provider} account unlinked successfully`);
+      // Reload to refresh linked accounts
+      window.location.reload();
+    } catch (err: any) {
+      toast.error(err.message || `Failed to unlink ${provider} account`);
+    } finally {
+      setUnlinkingProvider(null);
+    }
+  };
+
+  // LinkedAccountRow component
+  const LinkedAccountRow = ({ 
+    provider, 
+    linked, 
+    onLink, 
+    onUnlink, 
+    icon, 
+    linkedAccountsCount 
+  }: { 
+    provider: string;
+    linked: any;
+    onLink: () => void;
+    onUnlink: () => void;
+    icon: React.ReactNode;
+    linkedAccountsCount: number;
+  }) => (
+    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+      <div className="flex items-center gap-3">
+        {icon}
+        <div>
+          <p className="font-medium text-sm capitalize">{provider}</p>
+          {linked && (
+            <p className="text-xs text-muted-foreground">{linked.email}</p>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        {linked ? (
+          <>
+            <Badge variant="default">Connected</Badge>
+            {linkedAccountsCount > 1 && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={onUnlink}
+                disabled={unlinkingProvider === provider}
+                className="text-destructive hover:text-destructive"
+              >
+                {unlinkingProvider === provider ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Unlink"
+                )}
+              </Button>
+            )}
+          </>
+        ) : (
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={onLink}
+            disabled={linkingProvider === provider}
+          >
+            {linkingProvider === provider ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : null}
+            Connect
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -234,32 +349,59 @@ export function ProfileSecurity() {
         <CardHeader>
           <CardTitle>Linked Accounts</CardTitle>
           <CardDescription>
-            Manage connected social accounts
+            Manage connected social accounts for easier sign-in
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {['google', 'facebook', 'apple', 'email'].map(provider => {
-            const linked = linkedAccounts.find(a => a.provider === provider);
-            return (
-              <div 
-                key={provider}
-                className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-              >
-                <div className="flex items-center gap-3">
-                  {getProviderIcon(provider)}
-                  <div>
-                    <p className="font-medium text-sm capitalize">{provider}</p>
-                    {linked && (
-                      <p className="text-xs text-muted-foreground">{linked.email}</p>
-                    )}
-                  </div>
-                </div>
-                <Badge variant={linked ? "default" : "outline"}>
-                  {linked ? "Connected" : "Not Connected"}
-                </Badge>
+          {/* Google */}
+          <LinkedAccountRow
+            provider="google"
+            linked={linkedAccounts.find(a => a.provider === 'google')}
+            onLink={handleLinkGoogle}
+            onUnlink={() => handleUnlinkProvider('google')}
+            icon={getProviderIcon('google')}
+            linkedAccountsCount={linkedAccounts.length}
+          />
+          
+          {/* Facebook - Not supported in Lovable Cloud */}
+          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 opacity-60">
+            <div className="flex items-center gap-3">
+              {getProviderIcon('facebook')}
+              <div>
+                <p className="font-medium text-sm capitalize">Facebook</p>
+                <p className="text-xs text-muted-foreground">Coming soon</p>
               </div>
-            );
-          })}
+            </div>
+            <Badge variant="outline">Not Available</Badge>
+          </div>
+          
+          {/* Apple - Not supported in Lovable Cloud */}
+          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 opacity-60">
+            <div className="flex items-center gap-3">
+              {getProviderIcon('apple')}
+              <div>
+                <p className="font-medium text-sm capitalize">Apple</p>
+                <p className="text-xs text-muted-foreground">Coming soon</p>
+              </div>
+            </div>
+            <Badge variant="outline">Not Available</Badge>
+          </div>
+
+          {/* Email/Password */}
+          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+            <div className="flex items-center gap-3">
+              {getProviderIcon('email')}
+              <div>
+                <p className="font-medium text-sm">Email & Password</p>
+                <p className="text-xs text-muted-foreground">{profile.email}</p>
+              </div>
+            </div>
+            <Badge variant="default">Primary</Badge>
+          </div>
+          
+          <p className="text-xs text-muted-foreground pt-2">
+            You must keep at least one login method active. Linking accounts with the same email will automatically merge your data.
+          </p>
         </CardContent>
       </Card>
 

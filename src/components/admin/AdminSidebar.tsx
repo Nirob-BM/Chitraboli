@@ -63,7 +63,8 @@ const sidebarGroups: SidebarGroup[] = [
     icon: Users,
     defaultOpen: false,
     items: [
-      { id: "customer-list", label: "Customer List", icon: Users },
+      { id: "user-profiles", label: "User Profiles", icon: Users },
+      { id: "customer-list", label: "Order Customers", icon: Users },
       { id: "messages", label: "Messages", icon: MessageSquare },
     ],
   },
