@@ -93,10 +93,10 @@ export function useUserProfile() {
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      setProfile(data as UserProfile);
+      setProfile(data as UserProfile | null);
     } catch (err: any) {
       console.error('Error fetching profile:', err);
       setError(err.message);

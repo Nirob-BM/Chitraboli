@@ -541,7 +541,9 @@ export const UserProfileManagement = () => {
                   </span>
                   <span className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
-                    {format(new Date(user.created_at), 'MMM d, yyyy')}
+                    {user.created_at && !isNaN(new Date(user.created_at).getTime()) 
+                      ? format(new Date(user.created_at), 'MMM d, yyyy')
+                      : 'N/A'}
                   </span>
                 </div>
               </CardContent>
@@ -744,7 +746,7 @@ export const UserProfileManagement = () => {
                         <div className="p-4 rounded-lg bg-muted/30">
                           <p className="text-sm text-muted-foreground">Last Login</p>
                           <p className="font-medium">
-                            {selectedUser?.last_login_at 
+                            {selectedUser?.last_login_at && !isNaN(new Date(selectedUser.last_login_at).getTime())
                               ? format(new Date(selectedUser.last_login_at), 'MMM d, yyyy h:mm a')
                               : 'Never'
                             }
@@ -753,7 +755,9 @@ export const UserProfileManagement = () => {
                         <div className="p-4 rounded-lg bg-muted/30">
                           <p className="text-sm text-muted-foreground">Member Since</p>
                           <p className="font-medium">
-                            {format(new Date(selectedUser?.created_at || ''), 'MMM d, yyyy')}
+                            {selectedUser?.created_at && !isNaN(new Date(selectedUser.created_at).getTime())
+                              ? format(new Date(selectedUser.created_at), 'MMM d, yyyy')
+                              : 'N/A'}
                           </p>
                         </div>
                       </div>
@@ -876,7 +880,9 @@ export const UserProfileManagement = () => {
                         <div>
                           <p className="font-medium">#{order.id.slice(0, 8)}</p>
                           <p className="text-sm text-muted-foreground">
-                            {format(new Date(order.created_at), 'MMM d, yyyy')}
+                            {order.created_at && !isNaN(new Date(order.created_at).getTime())
+                              ? format(new Date(order.created_at), 'MMM d, yyyy')
+                              : 'N/A'}
                           </p>
                         </div>
                         <div className="text-right">
