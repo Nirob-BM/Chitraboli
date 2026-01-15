@@ -19,7 +19,18 @@ export function ProfileSettings() {
 
   if (!profile) return null;
 
-  const { notification_preferences: prefs } = profile;
+  // Default notification preferences if not set
+  const defaultPrefs = {
+    order_updates: true,
+    price_drops: true,
+    new_collections: true,
+    promotions: false,
+    email: true,
+    sms: false,
+    whatsapp: false
+  };
+
+  const prefs = profile.notification_preferences ?? defaultPrefs;
 
   const notificationOptions = [
     {

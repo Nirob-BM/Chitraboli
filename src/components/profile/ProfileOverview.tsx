@@ -28,22 +28,44 @@ export function ProfileOverview() {
   const { getOrderStats } = useUserOrders();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
-    full_name: profile?.full_name || "",
-    phone: profile?.phone || ""
+    full_name: "",
+    phone: ""
   });
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Update editData when profile loads
+  const handleStartEdit = () => {
+    setEditData({
+      full_name: profile?.full_name || "",
+      phone: profile?.phone || ""
+    });
+    setIsEditing(true);
+  };
 
   const orderStats = getOrderStats();
 
   if (!profile || !user) return null;
 
-  const loyaltyColors = {
+  const loyaltyColors: Record<string, string> = {
     silver: "bg-gray-400",
     gold: "bg-yellow-500",
     platinum: "bg-purple-500",
     vip: "bg-gradient-to-r from-gold to-gold-light"
   };
+
+  // Safe date formatting helper
+  const formatDate = (dateStr: string | null | undefined, formatStr: string) => {
+    if (!dateStr) return 'N/A';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'N/A';
+    return format(date, formatStr);
+  };
+
+  // Safe number formatting
+  const walletBalance = profile.wallet_balance ?? 0;
+  const storeCredit = profile.store_credit ?? 0;
+  const loyaltyTier = profile.loyalty_tier || 'silver';
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -131,7 +153,7 @@ export function ProfileOverview() {
                     size="icon" 
                     variant="ghost" 
                     className="h-6 w-6"
-                    onClick={() => setIsEditing(true)}
+                    onClick={handleStartEdit}
                   >
                     <Edit2 className="w-3 h-3" />
                   </Button>
@@ -142,10 +164,10 @@ export function ProfileOverview() {
 
             {/* Loyalty Badge */}
             <Badge 
-              className={`${loyaltyColors[profile.loyalty_tier]} text-white mb-4 capitalize`}
+              className={`${loyaltyColors[loyaltyTier] || loyaltyColors.silver} text-white mb-4 capitalize`}
             >
               <Award className="w-3 h-3 mr-1" />
-              {profile.loyalty_tier} Member
+              {loyaltyTier} Member
             </Badge>
 
             {/* Email Verified Status */}
@@ -169,12 +191,12 @@ export function ProfileOverview() {
             <div className="text-sm text-muted-foreground space-y-2">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                <span>Member since {format(new Date(profile.created_at), 'MMM yyyy')}</span>
+                <span>Member since {formatDate(profile.created_at, 'MMM yyyy')}</span>
               </div>
               {profile.last_login_at && (
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />
-                  <span>Last login {format(new Date(profile.last_login_at), 'MMM d, yyyy')}</span>
+                  <span>Last login {formatDate(profile.last_login_at, 'MMM d, yyyy')}</span>
                 </div>
               )}
             </div>
@@ -209,9 +231,9 @@ export function ProfileOverview() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gold">৳{profile.wallet_balance.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-gold">৳{walletBalance.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              + ৳{profile.store_credit.toLocaleString()} store credit
+              + ৳{storeCredit.toLocaleString()} store credit
             </p>
           </CardContent>
         </Card>

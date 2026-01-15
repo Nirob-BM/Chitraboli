@@ -24,6 +24,14 @@ import {
   DialogTrigger 
 } from "@/components/ui/dialog";
 
+// Safe date formatting helper
+const formatOrderDate = (dateStr: string | null | undefined, formatStr: string = 'MMM d, yyyy • h:mm a') => {
+  if (!dateStr) return 'N/A';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return 'N/A';
+  return format(date, formatStr);
+};
+
 const statusConfig: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
   pending: { color: "bg-yellow-500", icon: <Clock className="w-4 h-4" />, label: "Pending" },
   confirmed: { color: "bg-blue-500", icon: <CheckCircle2 className="w-4 h-4" />, label: "Confirmed" },
@@ -78,7 +86,7 @@ function OrderCard({ order }: { order: UserOrder }) {
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
-              {format(new Date(order.created_at), 'MMM d, yyyy • h:mm a')}
+              {formatOrderDate(order.created_at)}
             </p>
             <p className="text-sm">
               {order.items.length} item{order.items.length > 1 ? 's' : ''} • 
@@ -106,7 +114,7 @@ function OrderCard({ order }: { order: UserOrder }) {
                     <span className="ml-1">{status.label}</span>
                   </Badge>
                   <span className="text-sm text-muted-foreground">
-                    {format(new Date(order.created_at), 'MMM d, yyyy')}
+                    {formatOrderDate(order.created_at, 'MMM d, yyyy')}
                   </span>
                 </div>
 

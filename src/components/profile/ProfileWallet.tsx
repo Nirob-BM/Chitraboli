@@ -14,6 +14,14 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
+// Safe date formatting helper
+const formatTransactionDate = (dateStr: string | null | undefined) => {
+  if (!dateStr) return 'N/A';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return 'N/A';
+  return format(date, 'MMM d, yyyy • h:mm a');
+};
+
 const transactionConfig: Record<WalletTransaction['transaction_type'], { 
   icon: React.ReactNode; 
   color: string; 
@@ -150,7 +158,7 @@ export function ProfileWallet() {
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(transaction.created_at), 'MMM d, yyyy • h:mm a')}
+                        {formatTransactionDate(transaction.created_at)}
                       </p>
                     </div>
 

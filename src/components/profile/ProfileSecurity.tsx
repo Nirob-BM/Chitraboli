@@ -35,6 +35,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+// Safe date formatting helper
+const formatSessionDate = (dateStr: string | null | undefined) => {
+  if (!dateStr) return 'Unknown';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return 'Unknown';
+  return format(date, 'MMM d, h:mm a');
+};
+
 export function ProfileSecurity() {
   const { profile, linkedAccounts, sessions, terminateSession, terminateAllSessions, updateProfile, user } = useUserProfile();
   const [changingPassword, setChangingPassword] = useState(false);
@@ -463,10 +471,7 @@ export function ProfileSecurity() {
                       <p className="text-xs text-muted-foreground">
                         {session.location && `${session.location} • `}
                         {session.ip_address && `${session.ip_address} • `}
-                        Last active: {session.last_activity 
-                          ? format(new Date(session.last_activity), 'MMM d, h:mm a')
-                          : 'Unknown'
-                        }
+                        Last active: {formatSessionDate(session.last_activity)}
                       </p>
                     </div>
                   </div>
