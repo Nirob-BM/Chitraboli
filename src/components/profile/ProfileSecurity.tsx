@@ -56,7 +56,14 @@ export function ProfileSecurity() {
   const [linkingProvider, setLinkingProvider] = useState<string | null>(null);
   const [unlinkingProvider, setUnlinkingProvider] = useState<string | null>(null);
 
-  if (!profile) return null;
+  // Create safe defaults for when profile is loading
+  const safeProfile = {
+    email: profile?.email || user?.email || '',
+    email_verified: profile?.email_verified ?? false,
+    two_factor_enabled: profile?.two_factor_enabled ?? false,
+  };
+  
+  if (!user) return null;
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -247,7 +254,7 @@ export function ProfileSecurity() {
           {/* Email Verification Status */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
             <div className="flex items-center gap-3">
-              {profile.email_verified ? (
+              {safeProfile.email_verified ? (
                 <CheckCircle2 className="w-5 h-5 text-green-500" />
               ) : (
                 <XCircle className="w-5 h-5 text-yellow-500" />
@@ -255,12 +262,12 @@ export function ProfileSecurity() {
               <div>
                 <p className="font-medium text-sm">Email Verification</p>
                 <p className="text-xs text-muted-foreground">
-                  {profile.email_verified ? "Your email is verified" : "Verify your email for better security"}
+                  {safeProfile.email_verified ? "Your email is verified" : "Verify your email for better security"}
                 </p>
               </div>
             </div>
-            <Badge variant={profile.email_verified ? "default" : "secondary"}>
-              {profile.email_verified ? "Verified" : "Pending"}
+            <Badge variant={safeProfile.email_verified ? "default" : "secondary"}>
+              {safeProfile.email_verified ? "Verified" : "Pending"}
             </Badge>
           </div>
 
@@ -276,7 +283,7 @@ export function ProfileSecurity() {
               </div>
             </div>
             <Switch
-              checked={profile.two_factor_enabled}
+              checked={safeProfile.two_factor_enabled}
               onCheckedChange={(checked) => {
                 // 2FA would need more complex implementation
                 toast.info("2FA setup requires additional configuration");
@@ -401,7 +408,7 @@ export function ProfileSecurity() {
               {getProviderIcon('email')}
               <div>
                 <p className="font-medium text-sm">Email & Password</p>
-                <p className="text-xs text-muted-foreground">{profile.email}</p>
+                <p className="text-xs text-muted-foreground">{safeProfile.email}</p>
               </div>
             </div>
             <Badge variant="default">Primary</Badge>

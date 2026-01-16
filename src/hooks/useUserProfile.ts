@@ -87,7 +87,7 @@ export function useUserProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string, userEmail?: string) => {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
@@ -96,7 +96,52 @@ export function useUserProfile() {
         .maybeSingle();
 
       if (error) throw error;
-      setProfile(data as UserProfile | null);
+      
+      // If no profile exists, create one
+      if (!data && userEmail) {
+        const newProfile = {
+          id: userId,
+          email: userEmail,
+          full_name: null,
+          phone: null,
+          avatar_url: null,
+          date_of_birth: null,
+          gender: null,
+          loyalty_tier: 'silver' as const,
+          wallet_balance: 0,
+          store_credit: 0,
+          account_status: 'active' as const,
+          email_verified: false,
+          phone_verified: false,
+          two_factor_enabled: false,
+          notification_preferences: {
+            order_updates: true,
+            price_drops: true,
+            new_collections: true,
+            promotions: true,
+            email: true,
+            sms: false,
+            whatsapp: false
+          },
+          metadata: {}
+        };
+        
+        const { data: createdProfile, error: createError } = await supabase
+          .from('user_profiles')
+          .insert(newProfile)
+          .select()
+          .single();
+          
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          // Set a default profile object even if DB insert fails
+          setProfile(newProfile as UserProfile);
+        } else {
+          setProfile(createdProfile as UserProfile);
+        }
+      } else {
+        setProfile(data as UserProfile | null);
+      }
     } catch (err: any) {
       console.error('Error fetching profile:', err);
       setError(err.message);
@@ -154,7 +199,7 @@ export function useUserProfile() {
       if (session?.user) {
         setTimeout(() => {
           Promise.all([
-            fetchProfile(session.user.id),
+            fetchProfile(session.user.id, session.user.email),
             fetchAddresses(session.user.id),
             fetchLinkedAccounts(session.user.id),
             fetchSessions(session.user.id)
@@ -173,7 +218,7 @@ export function useUserProfile() {
       setUser(session?.user ?? null);
       if (session?.user) {
         Promise.all([
-          fetchProfile(session.user.id),
+          fetchProfile(session.user.id, session.user.email),
           fetchAddresses(session.user.id),
           fetchLinkedAccounts(session.user.id),
           fetchSessions(session.user.id)

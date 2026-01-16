@@ -46,7 +46,7 @@ const Profile = () => {
     );
   }
 
-  if (!user || !profile) {
+  if (!user) {
     return null;
   }
 

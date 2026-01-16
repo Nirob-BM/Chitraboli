@@ -38,7 +38,7 @@ export function ProfileWallet() {
   const { profile } = useUserProfile();
   const { transactions, balance, storeCredit, totalBalance, loading, getTotalCredits, getTotalDebits } = useWallet();
 
-  if (loading || !profile) {
+  if (loading) {
     return (
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-3">

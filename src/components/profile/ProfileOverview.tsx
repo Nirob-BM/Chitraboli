@@ -45,7 +45,30 @@ export function ProfileOverview() {
 
   const orderStats = getOrderStats();
 
-  if (!profile || !user) return null;
+  if (!user) {
+    return (
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card className="md:col-span-3 bg-card/50 backdrop-blur border-border/50">
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">Loading profile...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Create a safe profile object with defaults
+  const safeProfile = {
+    full_name: profile?.full_name || null,
+    avatar_url: profile?.avatar_url || null,
+    phone: profile?.phone || null,
+    email_verified: profile?.email_verified ?? false,
+    wallet_balance: profile?.wallet_balance ?? 0,
+    store_credit: profile?.store_credit ?? 0,
+    loyalty_tier: profile?.loyalty_tier || 'silver',
+    created_at: profile?.created_at || null,
+    last_login_at: profile?.last_login_at || null,
+  };
 
   const loyaltyColors: Record<string, string> = {
     silver: "bg-gray-400",
@@ -61,11 +84,6 @@ export function ProfileOverview() {
     if (isNaN(date.getTime())) return 'N/A';
     return format(date, formatStr);
   };
-
-  // Safe number formatting
-  const walletBalance = profile.wallet_balance ?? 0;
-  const storeCredit = profile.store_credit ?? 0;
-  const loyaltyTier = profile.loyalty_tier || 'silver';
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -83,8 +101,8 @@ export function ProfileOverview() {
 
   const handleCancel = () => {
     setEditData({
-      full_name: profile.full_name || "",
-      phone: profile.phone || ""
+      full_name: profile?.full_name || "",
+      phone: profile?.phone || ""
     });
     setIsEditing(false);
   };
@@ -98,9 +116,9 @@ export function ProfileOverview() {
             {/* Avatar */}
             <div className="relative group mb-4">
               <Avatar className="w-24 h-24 border-4 border-primary/20">
-                <AvatarImage src={profile.avatar_url || undefined} />
+                <AvatarImage src={safeProfile.avatar_url || undefined} />
                 <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                  {profile.full_name?.[0] || user.email?.[0]?.toUpperCase() || "U"}
+                  {safeProfile.full_name?.[0] || user.email?.[0]?.toUpperCase() || "U"}
                 </AvatarFallback>
               </Avatar>
               <button
@@ -135,7 +153,7 @@ export function ProfileOverview() {
                   className="text-center"
                 />
                 <div className="flex gap-2 justify-center">
-                  <Button size="sm" onClick={handleSave}>
+                  <Button size="sm" onClick={handleSave} disabled={!profile}>
                     <Check className="w-4 h-4 mr-1" /> Save
                   </Button>
                   <Button size="sm" variant="outline" onClick={handleCancel}>
@@ -147,13 +165,14 @@ export function ProfileOverview() {
               <>
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-display text-xl font-semibold">
-                    {profile.full_name || "Set your name"}
+                    {safeProfile.full_name || "Set your name"}
                   </h3>
                   <Button 
                     size="icon" 
                     variant="ghost" 
                     className="h-6 w-6"
                     onClick={handleStartEdit}
+                    disabled={!profile}
                   >
                     <Edit2 className="w-3 h-3" />
                   </Button>
@@ -164,24 +183,24 @@ export function ProfileOverview() {
 
             {/* Loyalty Badge */}
             <Badge 
-              className={`${loyaltyColors[loyaltyTier] || loyaltyColors.silver} text-white mb-4 capitalize`}
+              className={`${loyaltyColors[safeProfile.loyalty_tier] || loyaltyColors.silver} text-white mb-4 capitalize`}
             >
               <Award className="w-3 h-3 mr-1" />
-              {loyaltyTier} Member
+              {safeProfile.loyalty_tier} Member
             </Badge>
 
             {/* Email Verified Status */}
             <div className="flex items-center gap-2 text-sm">
               <Mail className="w-4 h-4 text-muted-foreground" />
-              <span className={profile.email_verified ? "text-green-500" : "text-yellow-500"}>
-                {profile.email_verified ? "Email Verified" : "Email Not Verified"}
+              <span className={safeProfile.email_verified ? "text-green-500" : "text-yellow-500"}>
+                {safeProfile.email_verified ? "Email Verified" : "Email Not Verified"}
               </span>
             </div>
 
-            {profile.phone && (
+            {safeProfile.phone && (
               <div className="flex items-center gap-2 text-sm mt-2">
                 <Phone className="w-4 h-4 text-muted-foreground" />
-                <span>{profile.phone}</span>
+                <span>{safeProfile.phone}</span>
               </div>
             )}
 
@@ -191,12 +210,12 @@ export function ProfileOverview() {
             <div className="text-sm text-muted-foreground space-y-2">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                <span>Member since {formatDate(profile.created_at, 'MMM yyyy')}</span>
+                <span>Member since {formatDate(safeProfile.created_at, 'MMM yyyy')}</span>
               </div>
-              {profile.last_login_at && (
+              {safeProfile.last_login_at && (
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />
-                  <span>Last login {formatDate(profile.last_login_at, 'MMM d, yyyy')}</span>
+                  <span>Last login {formatDate(safeProfile.last_login_at, 'MMM d, yyyy')}</span>
                 </div>
               )}
             </div>
@@ -231,9 +250,9 @@ export function ProfileOverview() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gold">৳{walletBalance.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-gold">৳{safeProfile.wallet_balance.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              + ৳{storeCredit.toLocaleString()} store credit
+              + ৳{safeProfile.store_credit.toLocaleString()} store credit
             </p>
           </CardContent>
         </Card>

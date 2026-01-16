@@ -17,8 +17,6 @@ import {
 export function ProfileSettings() {
   const { profile, updateNotificationPreferences } = useUserProfile();
 
-  if (!profile) return null;
-
   // Default notification preferences if not set
   const defaultPrefs = {
     order_updates: true,
@@ -30,7 +28,12 @@ export function ProfileSettings() {
     whatsapp: false
   };
 
-  const prefs = profile.notification_preferences ?? defaultPrefs;
+  const prefs = profile?.notification_preferences ?? defaultPrefs;
+
+  const handlePreferenceChange = (key: keyof typeof defaultPrefs, checked: boolean) => {
+    if (!profile) return;
+    updateNotificationPreferences({ [key]: checked });
+  };
 
   const notificationOptions = [
     {
@@ -113,9 +116,8 @@ export function ProfileSettings() {
                 <Switch
                   id={option.key}
                   checked={prefs[option.key]}
-                  onCheckedChange={(checked) => 
-                    updateNotificationPreferences({ [option.key]: checked })
-                  }
+                  disabled={!profile}
+                  onCheckedChange={(checked) => handlePreferenceChange(option.key, checked)}
                 />
               </div>
               {index < notificationOptions.length - 1 && <Separator />}
@@ -152,9 +154,8 @@ export function ProfileSettings() {
                 <Switch
                   id={`channel-${option.key}`}
                   checked={prefs[option.key]}
-                  onCheckedChange={(checked) => 
-                    updateNotificationPreferences({ [option.key]: checked })
-                  }
+                  disabled={!profile}
+                  onCheckedChange={(checked) => handlePreferenceChange(option.key, checked)}
                 />
               </div>
               {index < channelOptions.length - 1 && <Separator />}
