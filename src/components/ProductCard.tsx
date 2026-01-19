@@ -1,11 +1,13 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingCart, View, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "@/hooks/use-toast";
-import { Product3DViewer } from "./Product3DViewer";
-import { ARTryOn } from "./ARTryOn";
+
+// Lazy load heavy AR/3D components to improve initial load performance
+const Product3DViewer = lazy(() => import("./Product3DViewer").then(m => ({ default: m.Product3DViewer })));
+const ARTryOn = lazy(() => import("./ARTryOn").then(m => ({ default: m.ARTryOn })));
 
 interface ProductCardProps {
   id: string | number;
@@ -108,23 +110,31 @@ export const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
           </div>
         </Link>
 
-        {/* 3D Viewer Modal */}
-        <Product3DViewer
-          isOpen={show3DViewer}
-          onClose={() => setShow3DViewer(false)}
-          productName={name}
-          productImage={image}
-          category={category}
-        />
+        {/* 3D Viewer Modal - Lazy loaded */}
+        {show3DViewer && (
+          <Suspense fallback={null}>
+            <Product3DViewer
+              isOpen={show3DViewer}
+              onClose={() => setShow3DViewer(false)}
+              productName={name}
+              productImage={image}
+              category={category}
+            />
+          </Suspense>
+        )}
 
-        {/* AR Try-On Modal */}
-        <ARTryOn
-          isOpen={showARTryOn}
-          onClose={() => setShowARTryOn(false)}
-          productName={name}
-          productImage={image}
-          category={category}
-        />
+        {/* AR Try-On Modal - Lazy loaded */}
+        {showARTryOn && (
+          <Suspense fallback={null}>
+            <ARTryOn
+              isOpen={showARTryOn}
+              onClose={() => setShowARTryOn(false)}
+              productName={name}
+              productImage={image}
+              category={category}
+            />
+          </Suspense>
+        )}
       </>
     );
   }
