@@ -16,7 +16,7 @@ export const SpecialOffersSection = () => {
       <section className="py-20 bg-card relative overflow-hidden">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/10 text-destructive mb-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive text-destructive-foreground mb-4">
               <Flame className="h-4 w-4" />
               <span className="text-sm font-medium">Hot Deals</span>
             </div>
@@ -42,7 +42,7 @@ export const SpecialOffersSection = () => {
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/10 text-destructive mb-4 animate-pulse">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive text-destructive-foreground mb-4 animate-pulse">
             <Flame className="h-4 w-4" />
             <span className="text-sm font-medium">Hot Deals</span>
           </div>
