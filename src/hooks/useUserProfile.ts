@@ -458,7 +458,7 @@ export function useUserProfile() {
     requestAccountDeactivation,
     refetch: () => {
       if (user) {
-        fetchProfile(user.id);
+        fetchProfile(user.id, user.email ?? undefined);
         fetchAddresses(user.id);
         fetchLinkedAccounts(user.id);
         fetchSessions(user.id);

@@ -44,13 +44,16 @@ export function useWallet() {
         .from('user_profiles')
         .select('wallet_balance, store_credit')
         .eq('id', uid)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      setBalance(data?.wallet_balance || 0);
-      setStoreCredit(data?.store_credit || 0);
+      setBalance(data?.wallet_balance ?? 0);
+      setStoreCredit(data?.store_credit ?? 0);
     } catch (err: any) {
       console.error('Error fetching balance:', err);
+      // Set defaults on error
+      setBalance(0);
+      setStoreCredit(0);
     }
   }, []);
 
