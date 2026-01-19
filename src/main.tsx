@@ -3,21 +3,19 @@ import App from "./App.tsx";
 import "./index.css";
 
 // Force the app to start at the top on hard refresh / first load.
-// (Some browsers restore scroll position on reload unless this is set very early.)
+// Using requestAnimationFrame to avoid forced reflow issues.
 if (typeof window !== "undefined") {
   if ("scrollRestoration" in window.history) {
     window.history.scrollRestoration = "manual";
   }
 
+  // Scroll to top without forcing reflow by batching in rAF
   const forceTop = () => {
-    const html = document.documentElement;
-    const prev = html.style.scrollBehavior;
-    html.style.scrollBehavior = "auto";
-    window.scrollTo(0, 0);
-    html.style.scrollBehavior = prev;
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+    });
   };
 
-  // Run ASAP and again after load (some browsers restore late)
   forceTop();
   window.addEventListener("load", forceTop, { once: true });
 }

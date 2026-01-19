@@ -1,22 +1,20 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 
 export const ScrollToTop = () => {
   const { pathname } = useLocation();
   const isFirstRender = useRef(true);
 
-  // Initial mount: always start from top (route entry + refresh fallback).
-  useLayoutEffect(() => {
+  // Initial mount: set scroll restoration to manual (no DOM read/write that causes reflow)
+  useEffect(() => {
     if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
     }
 
-    // Ensure this is instant even if global CSS uses smooth scrolling.
-    const html = document.documentElement;
-    const prev = html.style.scrollBehavior;
-    html.style.scrollBehavior = "auto";
-    window.scrollTo(0, 0);
-    html.style.scrollBehavior = prev;
+    // Use requestAnimationFrame to batch scroll operation and avoid forced reflow
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+    });
   }, []);
 
   // Route changes: smooth scroll (but skip the very first render).
@@ -25,7 +23,10 @@ export const ScrollToTop = () => {
       isFirstRender.current = false;
       return;
     }
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    // Use requestAnimationFrame to prevent forced reflow
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
   }, [pathname]);
 
   return null;
