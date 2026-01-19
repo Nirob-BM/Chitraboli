@@ -164,6 +164,7 @@ export function Navbar() {
               size="icon"
               className="relative"
               onClick={() => setCartOpen(true)}
+              aria-label="Open shopping cart"
             >
               <ShoppingBag className="h-5 w-5" />
               {totalItems > 0 && (

@@ -518,6 +518,7 @@ export const AIAssistant = () => {
                   onClick={() => setShowLanguageMenu(!showLanguageMenu)}
                   className="w-7 h-7 rounded-full bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors text-xs"
                   title="Change Language"
+                  aria-label="Change Language"
                 >
                   <Globe className="w-3.5 h-3.5" />
                 </button>
@@ -542,6 +543,7 @@ export const AIAssistant = () => {
               <button
                 onClick={() => setIsOpen(false)}
                 className="w-7 h-7 rounded-full bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors"
+                aria-label="Close AI Assistant"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -644,6 +646,7 @@ export const AIAssistant = () => {
                 (isLoading || isProcessingVoice) && "opacity-50 cursor-not-allowed"
               )}
               title={isRecording ? "Stop recording" : "Voice input"}
+              aria-label={isRecording ? "Stop recording" : "Voice input"}
             >
               {isRecording ? (
                 <MicOff className="w-3.5 h-3.5 text-white" />
@@ -667,6 +670,7 @@ export const AIAssistant = () => {
               onClick={() => sendMessage()}
               disabled={!input.trim() || isLoading || isRecording || isProcessingVoice}
               className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-accent to-gold flex items-center justify-center disabled:opacity-50 transition-opacity"
+              aria-label="Send message"
             >
               <Send className="w-3.5 h-3.5 text-white" />
             </button>
