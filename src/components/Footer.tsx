@@ -38,6 +38,7 @@ export function Footer() {
                 href="https://www.facebook.com/chitraboli1"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Follow us on Facebook"
                 className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
               >
                 <Facebook className="h-5 w-5" />
@@ -46,6 +47,7 @@ export function Footer() {
                 href="https://instagram.com/chitraboli.shop/"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Follow us on Instagram"
                 className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
               >
                 <Instagram className="h-5 w-5" />
@@ -54,6 +56,7 @@ export function Footer() {
                 href="https://wa.me/8801308697630"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Contact us on WhatsApp"
                 className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors"
               >
                 <MessageCircle className="h-5 w-5" />
