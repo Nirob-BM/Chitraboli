@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { MessageCircle, X, Send, Phone, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const WHATSAPP_NUMBER = "8801636665467";
+const WHATSAPP_NUMBER = "8801308697630";
 
 const QUICK_TOPICS = [
   "I want to order a piece of jewellery",

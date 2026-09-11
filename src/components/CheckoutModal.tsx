@@ -304,7 +304,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
         totalAmount: serverTotalAmount
       });
       const encodedMessage = encodeURIComponent(message);
-      setWhatsappUrl(`https://wa.me/8801636665467?text=${encodedMessage}`);
+      setWhatsappUrl(`https://wa.me/8801308697630?text=${encodedMessage}`);
 
       // SMS notification - fails silently if Twilio isn't configured for Bangladesh
       try {

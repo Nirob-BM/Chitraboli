@@ -38,7 +38,7 @@ ${itemsList}
 export const sendOrderToWhatsApp = (orderDetails: Parameters<typeof formatOrderForWhatsApp>[0]) => {
   const message = formatOrderForWhatsApp(orderDetails);
   const encodedMessage = encodeURIComponent(message);
-  const whatsappNumber = '8801636665467';
+  const whatsappNumber = '8801308697630';
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
   
   // Open in new tab
