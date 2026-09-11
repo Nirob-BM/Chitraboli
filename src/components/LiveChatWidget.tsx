@@ -99,7 +99,7 @@ export const LiveChatWidget = () => {
             href={`tel:+${WHATSAPP_NUMBER}`}
             className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            <Phone className="h-3.5 w-3.5 text-primary" /> +880 1636-665467
+            <Phone className="h-3.5 w-3.5 text-primary" /> +880 1308-697630
           </a>
           <a
             href="mailto:info.chitraboli@gmail.com"
