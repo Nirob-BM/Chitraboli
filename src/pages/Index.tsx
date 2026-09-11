@@ -4,10 +4,15 @@ import { ProductCard } from "@/components/ProductCard";
 import { NewArrivalsSection } from "@/components/NewArrivalsSection";
 import { SpecialOffersSection } from "@/components/SpecialOffersSection";
 import { SEO } from "@/components/SEO";
+import { LiveChatWidget } from "@/components/LiveChatWidget";
 import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles, Heart, Award } from "lucide-react";
 import { getFeaturedProducts } from "@/data/products";
 import heroProduct from "@/assets/hero-product.png.asset.json";
+
+const whatsappChatUrl = `https://wa.me/8801636665467?text=${encodeURIComponent(
+  "Hi Chitraboli! I'd love to know more about your jewellery."
+)}`;
 
 const Index = () => {
   const featuredProducts = getFeaturedProducts();
