@@ -34,10 +34,10 @@ export function Footer() {
             </p>
             <div className="flex gap-4 mt-6">
               <a
-                href="https://wa.me/8801636665467"
+                href={`https://wa.me/8801636665467?text=${encodeURIComponent("Hi Chitraboli! I have a question.")}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Contact us on WhatsApp"
+                aria-label="Chat with us on WhatsApp"
                 className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors"
               >
                 <MessageCircle className="h-5 w-5" />
@@ -76,7 +76,14 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center gap-3 text-muted-foreground text-sm">
                 <Phone className="h-4 w-4 text-primary" />
-                <span>+880 1308-697630</span>
+                <a
+                  href={`https://wa.me/8801636665467?text=${encodeURIComponent("Hi Chitraboli! I have a question.")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-foreground transition-colors"
+                >
+                  +880 1636-665467 (WhatsApp)
+                </a>
               </li>
               <li className="flex items-center gap-3 text-muted-foreground text-sm">
                 <Mail className="h-4 w-4 text-primary" />

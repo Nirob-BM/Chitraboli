@@ -4,10 +4,15 @@ import { ProductCard } from "@/components/ProductCard";
 import { NewArrivalsSection } from "@/components/NewArrivalsSection";
 import { SpecialOffersSection } from "@/components/SpecialOffersSection";
 import { SEO } from "@/components/SEO";
+import { LiveChatWidget } from "@/components/LiveChatWidget";
 import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles, Heart, Award } from "lucide-react";
 import { getFeaturedProducts } from "@/data/products";
 import heroProduct from "@/assets/hero-product.png.asset.json";
+
+const whatsappChatUrl = `https://wa.me/8801636665467?text=${encodeURIComponent(
+  "Hi Chitraboli! I'd love to know more about your jewellery."
+)}`;
 
 const Index = () => {
   const featuredProducts = getFeaturedProducts();
@@ -188,7 +193,7 @@ const Index = () => {
             <p className="text-muted-foreground mb-8">
               Chat with us on WhatsApp for the latest collections, special offers, and quick support.
             </p>
-            <a href="https://wa.me/8801636665467" target="_blank" rel="noopener noreferrer">
+            <a href={whatsappChatUrl} target="_blank" rel="noopener noreferrer">
               <Button variant="gold" size="lg">
                 Chat on WhatsApp
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -197,6 +202,9 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* Live chat inbox — real WhatsApp handoff, floats bottom-left */}
+      <LiveChatWidget />
     </Layout>
   );
 };
