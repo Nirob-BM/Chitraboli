@@ -10,7 +10,7 @@ import { ArrowRight, Sparkles, Heart, Award } from "lucide-react";
 import { getFeaturedProducts } from "@/data/products";
 import heroProduct from "@/assets/hero-product.png.asset.json";
 
-const whatsappChatUrl = `https://wa.me/8801636665467?text=${encodeURIComponent(
+const whatsappChatUrl = `https://wa.me/8801308697630?text=${encodeURIComponent(
   "Hi Chitraboli! I'd love to know more about your jewellery."
 )}`;
 
