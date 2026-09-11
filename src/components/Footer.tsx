@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Mail, Phone, MapPin, MessageCircle } from "lucide-react";
+import { Mail, Phone, MapPin, MessageCircle, Facebook, Instagram } from "lucide-react";
 
 export function Footer() {
   const location = useLocation();
@@ -34,13 +34,31 @@ export function Footer() {
             </p>
             <div className="flex gap-4 mt-6">
               <a
-                href={`https://wa.me/8801636665467?text=${encodeURIComponent("Hi Chitraboli! I have a question.")}`}
+                href={`https://wa.me/8801308697630?text=${encodeURIComponent("Hi Chitraboli! I have a question.")}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Chat with us on WhatsApp"
                 className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors"
               >
                 <MessageCircle className="h-5 w-5" />
+              </a>
+              <a
+                href="https://www.facebook.com/chitraboli1"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Visit our Facebook page"
+                className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-colors"
+              >
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a
+                href="https://www.instagram.com/chitraboli1/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Visit our Instagram page"
+                className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-pink-500 hover:bg-pink-500/10 transition-colors"
+              >
+                <Instagram className="h-5 w-5" />
               </a>
             </div>
           </div>
@@ -77,12 +95,12 @@ export function Footer() {
               <li className="flex items-center gap-3 text-muted-foreground text-sm">
                 <Phone className="h-4 w-4 text-primary" />
                 <a
-                  href={`https://wa.me/8801636665467?text=${encodeURIComponent("Hi Chitraboli! I have a question.")}`}
+                  href={`https://wa.me/8801308697630?text=${encodeURIComponent("Hi Chitraboli! I have a question.")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-foreground transition-colors"
                 >
-                  +880 1636-665467 (WhatsApp)
+                  +880 1308-697630 (WhatsApp)
                 </a>
               </li>
               <li className="flex items-center gap-3 text-muted-foreground text-sm">
