@@ -16,7 +16,9 @@ const whatsappChatUrl = `https://wa.me/8801308697630?text=${encodeURIComponent(
 )}`;
 
 const Index = () => {
-  const featuredProducts = getFeaturedProducts();
+  const { getFeaturedProducts, products, loading } = useProducts();
+  const featured = getFeaturedProducts();
+  const featuredProducts = (featured.length > 0 ? featured : products).slice(0, 4);
   return (
     <Layout>
       <SEO
