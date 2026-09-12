@@ -33,6 +33,7 @@ const sidebarGroups: SidebarGroup[] = [
     icon: Gauge,
     defaultOpen: true,
     items: [
+      { id: "dashboard", label: "Dashboard", icon: Gauge },
       { id: "orders", label: "Orders", icon: Package },
       { id: "statistics", label: "Statistics", icon: BarChart3 },
     ],

@@ -7,7 +7,8 @@ import { SEO } from "@/components/SEO";
 import { LiveChatWidget } from "@/components/LiveChatWidget";
 import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles, Heart, Award } from "lucide-react";
-import { getFeaturedProducts } from "@/data/products";
+import { useProducts } from "@/hooks/useProducts";
+import { ProductGridSkeleton } from "@/components/PageSkeleton";
 import heroProduct from "@/assets/hero-product.png.asset.json";
 
 const whatsappChatUrl = `https://wa.me/8801308697630?text=${encodeURIComponent(
@@ -15,7 +16,9 @@ const whatsappChatUrl = `https://wa.me/8801308697630?text=${encodeURIComponent(
 )}`;
 
 const Index = () => {
-  const featuredProducts = getFeaturedProducts();
+  const { getFeaturedProducts, products, loading } = useProducts();
+  const featured = getFeaturedProducts();
+  const featuredProducts = (featured.length > 0 ? featured : products).slice(0, 4);
   return (
     <Layout>
       <SEO
@@ -160,13 +163,25 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            {featuredProducts.slice(0, 4).map((product, i) => (
-              <div key={product.id} className={i === 3 ? "md:max-lg:hidden" : ""}>
-                <ProductCard {...product} />
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <ProductGridSkeleton count={4} />
+          ) : featuredProducts.length === 0 ? (
+            <p className="text-center text-muted-foreground">New pieces are on their way. Please check back soon.</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+              {featuredProducts.map((product, i) => (
+                <div key={product.id} className={i === 3 ? "md:max-lg:hidden" : ""}>
+                  <ProductCard
+                    id={product.id}
+                    name={product.name}
+                    price={product.price}
+                    image={product.image_url || product.images?.[0] || "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600"}
+                    category={product.category}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="text-center mt-12">
             <Button variant="hero" size="lg" asChild>

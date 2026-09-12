@@ -41,6 +41,7 @@ import { BackupManagement } from "@/components/admin/BackupManagement";
 import { RiderManagement } from "@/components/admin/RiderManagement";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { UserProfileManagement } from "@/components/admin/UserProfileManagement";
+import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 import { useDeliveryRiders } from "@/hooks/useDeliveryRiders";
 
@@ -119,7 +120,7 @@ const Admin = () => {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [deletingOrder, setDeletingOrder] = useState<string | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
-  const [activeTab, setActiveTab] = useState("orders");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const navigate = useNavigate();
 
@@ -446,6 +447,18 @@ const Admin = () => {
   // Render content based on active tab
   const renderContent = () => {
     switch (activeTab) {
+      case "dashboard":
+        return (
+          <AdminDashboard
+            orders={orders}
+            loading={loading}
+            updatingStatus={updatingStatus}
+            updatingPayment={updatingPayment}
+            onUpdateStatus={updateOrderStatus}
+            onUpdatePaymentStatus={updatePaymentStatus}
+            onViewAllOrders={() => setActiveTab("orders")}
+          />
+        );
       case "orders":
         return renderOrdersContent();
       case "products":
