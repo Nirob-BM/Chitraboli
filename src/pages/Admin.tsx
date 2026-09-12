@@ -447,6 +447,18 @@ const Admin = () => {
   // Render content based on active tab
   const renderContent = () => {
     switch (activeTab) {
+      case "dashboard":
+        return (
+          <AdminDashboard
+            orders={orders}
+            loading={loading}
+            updatingStatus={updatingStatus}
+            updatingPayment={updatingPayment}
+            onUpdateStatus={updateOrderStatus}
+            onUpdatePaymentStatus={updatePaymentStatus}
+            onViewAllOrders={() => setActiveTab("orders")}
+          />
+        );
       case "orders":
         return renderOrdersContent();
       case "products":
