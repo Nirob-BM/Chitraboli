@@ -11,10 +11,13 @@ interface ProductCardProps {
   price: number;
   image: string;
   category?: string;
+  sizes?: string[] | null;
+  colors?: string[] | null;
+  stockQuantity?: number | null;
 }
 
 export const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
-  ({ id, name, price, image, category }, ref) => {
+  ({ id, name, price, image, category, sizes, colors, stockQuantity }, ref) => {
     const { addItem } = useCart();
 
     const handleAddToCart = (e: React.MouseEvent) => {
@@ -71,6 +74,14 @@ export const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
               {name}
             </h3>
             <p className="text-primary font-semibold text-sm sm:text-base">৳ {price.toLocaleString()}</p>
+            {(colors?.length || sizes?.length) ? (
+              <p className="mt-1 text-[10px] sm:text-xs text-muted-foreground truncate">
+                {[colors?.length ? `${colors.length} color${colors.length > 1 ? "s" : ""}` : null, sizes?.length ? `Sizes: ${sizes.join(", ")}` : null].filter(Boolean).join(" · ")}
+              </p>
+            ) : null}
+            {typeof stockQuantity === "number" && stockQuantity > 0 && stockQuantity <= 5 && (
+              <p className="mt-1 text-[10px] sm:text-xs text-destructive font-medium">Only {stockQuantity} left</p>
+            )}
           </div>
         </div>
       </Link>

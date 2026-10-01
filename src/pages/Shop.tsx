@@ -110,6 +110,9 @@ const Shop = () => {
                       price={product.price}
                       image={product.image_url || "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600"}
                       category={product.category}
+                      sizes={product.sizes}
+                      colors={product.colors}
+                      stockQuantity={product.stock_quantity}
                     />
                   </div>
                 ))}
