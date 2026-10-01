@@ -68,7 +68,7 @@ const Auth = () => {
       .maybeSingle();
 
     if (data) {
-      navigate("/admin");
+      navigate("/localhost-69");
     } else {
       navigate("/profile");
     }

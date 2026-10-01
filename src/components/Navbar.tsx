@@ -112,9 +112,10 @@ export function Navbar() {
           <div className="flex items-center gap-2 md:gap-4">
             <ThemeToggle />
             
-            {/* User Account Menu */}
-            {user ? (
-              <DropdownMenu>
+            {/* Desktop User Account Menu */}
+            <div className="hidden md:block">
+              {user ? (
+                <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost-gold" size="icon" className="relative">
                     <User className="h-5 w-5" />
@@ -139,7 +140,7 @@ export function Navbar() {
                   {isAdmin && (
                     <>
                       <DropdownMenuItem asChild>
-                        <Link to="/admin" className="flex items-center gap-2 cursor-pointer">
+                        <Link to="/localhost-69" className="flex items-center gap-2 cursor-pointer">
                           <Shield className="h-4 w-4 text-gold" />
                           Admin Panel
                         </Link>
@@ -152,12 +153,13 @@ export function Navbar() {
                     Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button variant="ghost-gold" size="sm" asChild>
-                <Link to="/auth">Login</Link>
-              </Button>
-            )}
+                </DropdownMenu>
+              ) : (
+                <Button variant="ghost-gold" size="sm" asChild>
+                  <Link to="/auth">Login</Link>
+                </Button>
+              )}
+            </div>
             
             <Button
               variant="ghost-gold"
@@ -210,9 +212,17 @@ export function Navbar() {
               <div className="border-t border-border/50 pt-4 mt-2">
                 {user ? (
                   <>
+                    <Link
+                      to="/profile"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center gap-2 font-body text-sm tracking-wide text-foreground py-2"
+                    >
+                      <User className="h-4 w-4" />
+                      My Account
+                    </Link>
                     {isAdmin && (
                       <Link
-                        to="/admin"
+                        to="/localhost-69"
                         onClick={() => setIsOpen(false)}
                         className="flex items-center gap-2 font-body text-sm tracking-wide text-gold py-2"
                       >

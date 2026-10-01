@@ -3,7 +3,7 @@ import { Mail, Phone, MapPin, MessageCircle, Facebook, Instagram } from "lucide-
 
 export function Footer() {
   const location = useLocation();
-  const isAdminPage = location.pathname === "/admin";
+  const isAdminPage = location.pathname === "/localhost-69";
 
   // Minimal footer for admin page
   if (isAdminPage) {
