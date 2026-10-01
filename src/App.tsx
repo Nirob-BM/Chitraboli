@@ -94,7 +94,7 @@ const AppContent = () => {
             <Route path="/track-order" element={<TrackOrder />} />
             <Route path="/payment/return" element={<PaymentReturn />} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/admin" element={<ProtectedRoute requireAdmin><Admin /></ProtectedRoute>} />
+            <Route path="/localhost-69" element={<ProtectedRoute requireAdmin><Admin /></ProtectedRoute>} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/trust" element={<Trust />} />
