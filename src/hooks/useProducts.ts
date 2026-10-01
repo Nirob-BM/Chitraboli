@@ -11,6 +11,10 @@ export interface Product {
   description: string | null;
   featured: boolean;
   in_stock: boolean;
+  sizes: string[] | null;
+  colors: string[] | null;
+  stock_quantity: number | null;
+  sku: string | null;
 }
 
 export const useProducts = () => {
@@ -38,7 +42,7 @@ export const useProducts = () => {
     try {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, price, image_url, images, category, description, featured, in_stock")
+        .select("id, name, price, image_url, images, category, description, featured, in_stock, sizes, colors, stock_quantity, sku")
         .eq("in_stock", true)
         .order("created_at", { ascending: false });
 
