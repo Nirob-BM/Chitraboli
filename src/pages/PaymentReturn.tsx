@@ -28,8 +28,9 @@ const PaymentReturn = () => {
   return (
     <Layout>
       <SEO
-        title={isSuccess ? "Payment Successful | Chitraboli" : "Payment Not Completed | Chitraboli"}
+        title={isSuccess ? "Payment Successful" : "Payment Not Completed"}
         description="Payment result for your Chitraboli order."
+        url="/payment/return"
       />
       <section className="container mx-auto px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-md rounded-2xl border border-gold/20 bg-card p-8 text-center">
