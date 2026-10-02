@@ -151,7 +151,19 @@ const TrackOrder = () => {
       return;
     }
 
-    if (phoneNumber.trim().length < 10) {
+    const cleanOrderId = orderId.trim().replace(/^#/, "").trim();
+    const cleanPhone = phoneNumber.trim();
+
+    if (cleanOrderId.length < 10 || !/^[a-f0-9-]+$/i.test(cleanOrderId)) {
+      toast({
+        title: "Invalid order ID",
+        description: "Please enter the full order ID from your confirmation message (letters a-f, numbers and dashes, at least 10 characters).",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (cleanPhone.length < 10 || !/^[+]?[\d\s\-()]{10,20}$/.test(cleanPhone)) {
       toast({
         title: "Invalid phone number",
         description: "Please enter a valid phone number (at least 10 digits)",
@@ -170,10 +182,11 @@ const TrackOrder = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
         body: JSON.stringify({
-          orderId: orderId.trim(),
-          phoneNumber: phoneNumber.trim()
+          orderId: cleanOrderId,
+          phoneNumber: cleanPhone
         })
       });
 
