@@ -121,7 +121,9 @@ const Admin = () => {
   const [deletingOrder, setDeletingOrder] = useState<string | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => typeof window !== "undefined" && window.innerWidth < 768
+  );
   const navigate = useNavigate();
 
   // Notification hook
