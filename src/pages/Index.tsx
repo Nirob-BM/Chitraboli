@@ -4,12 +4,28 @@ import { ProductCard } from "@/components/ProductCard";
 import { NewArrivalsSection } from "@/components/NewArrivalsSection";
 import { SpecialOffersSection } from "@/components/SpecialOffersSection";
 import { SEO } from "@/components/SEO";
-import { LiveChatWidget } from "@/components/LiveChatWidget";
 import { Link } from "react-router-dom";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { ArrowRight, Sparkles, Heart, Award } from "lucide-react";
 import { useProducts } from "@/hooks/useProducts";
 import { ProductGridSkeleton } from "@/components/PageSkeleton";
-import heroProduct from "@/assets/hero-product.png.asset.json";
+import heroSmall from "@/assets/hero-product-440.webp.asset.json";
+import heroLarge from "@/assets/hero-product-880.webp.asset.json";
+
+// Live chat is non-critical: load its code only after the page is idle.
+const LiveChatWidget = lazy(() =>
+  import("@/components/LiveChatWidget").then((m) => ({ default: m.LiveChatWidget }))
+);
+
+function DeferredLiveChat() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const w = window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    if (w.requestIdleCallback) w.requestIdleCallback(() => setReady(true), { timeout: 3000 });
+    else { const t = setTimeout(() => setReady(true), 3000); return () => clearTimeout(t); }
+  }, []);
+  return ready ? <Suspense fallback={null}><DeferredLiveChat /></Suspense> : null;
+}
 
 const whatsappChatUrl = `https://wa.me/8801308697630?text=${encodeURIComponent(
   "Hi Chitraboli! I'd love to know more about your jewellery."
@@ -88,13 +104,15 @@ const Index = () => {
                   }}
                 />
                 <img
-                  src={heroProduct.url}
+                  src={heroLarge.url}
+                  srcSet={`${heroSmall.url} 440w, ${heroLarge.url} 880w`}
+                  sizes="(min-width: 1024px) 440px, 80vw"
                   alt="Handcrafted Chitraboli necklace with clay sitar motif, orange flowers and matching stud earrings"
                   width={880}
-                  height={1180}
+                  height={1174}
                   fetchPriority="high"
                   loading="eager"
-                  decoding="async"
+                  decoding="sync"
                   className="relative z-10 w-full h-full object-contain drop-shadow-[0_30px_60px_rgba(0,0,0,0.6)] lg:rotate-[-3deg] transition-transform duration-700 hover:rotate-0 hover:scale-[1.02]"
                 />
               </div>
@@ -219,7 +237,7 @@ const Index = () => {
       </section>
 
       {/* Live chat inbox — real WhatsApp handoff, floats bottom-left */}
-      <LiveChatWidget />
+      <DeferredLiveChat />
     </Layout>
   );
 };
