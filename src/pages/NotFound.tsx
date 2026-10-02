@@ -1,4 +1,5 @@
 import { Layout } from "@/components/Layout";
+import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Home, ArrowLeft } from "lucide-react";
@@ -6,6 +7,7 @@ import { Home, ArrowLeft } from "lucide-react";
 const NotFound = () => {
   return (
     <Layout>
+      <SEO title="Page Not Found" description="The page you were looking for could not be found. Browse Chitraboli's handcrafted jewellery collection instead." url="" />
       <section className="min-h-[70vh] flex items-center justify-center gradient-hero">
         <div className="container mx-auto px-4 text-center">
           <h1 className="font-display text-8xl md:text-9xl font-bold text-gold mb-4">

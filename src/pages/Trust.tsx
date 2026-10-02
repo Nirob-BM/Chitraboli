@@ -38,7 +38,7 @@ export default function Trust() {
   return (
     <>
       <SEO
-        title="Trust & Security — Chitraboli"
+        title="Trust & Security"
         description="How Chitraboli protects your data, secures your orders, and respects your privacy."
         url="/trust"
       />

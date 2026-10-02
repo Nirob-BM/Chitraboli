@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SEO } from "@/components/SEO";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -52,6 +53,7 @@ const Profile = () => {
 
   return (
     <Layout>
+      <SEO title="My Account" description="Manage your Chitraboli account — orders, wishlist, saved addresses, wallet and security settings." url="/profile" />
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-8 pt-24">
         <div className="container mx-auto px-4">
           {/* Profile Header */}

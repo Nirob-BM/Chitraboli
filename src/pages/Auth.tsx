@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SEO } from "@/components/SEO";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -186,6 +187,7 @@ const Auth = () => {
 
   return (
     <Layout>
+      <SEO title="Sign In or Create Account" description="Sign in to your Chitraboli account or create one to track orders, save favourites and check out faster." url="/auth" />
       <div className="min-h-screen flex items-center justify-center py-12 px-4">
         <Card className="w-full max-w-md bg-card border-border">
           <CardHeader className="text-center">
