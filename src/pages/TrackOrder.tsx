@@ -99,21 +99,8 @@ const TrackOrder = () => {
   useEffect(() => {
     const loadOrderHistory = async () => {
       if (phoneNumber.trim().length >= 11) {
-        setLoadingRecent(true);
-        try {
-          // Try to fetch recent orders for this phone number using the RPC
-          const { data, error } = await supabase.rpc('track_order', {
-            order_id: '00000000-0000-0000-0000-000000000000', // Dummy ID to get validation error
-            phone_number: phoneNumber.trim()
-          });
-          
-          // This will fail validation but we're just checking connectivity
-          // Real order history needs to be fetched after a successful track
-        } catch (e) {
-          // Expected to fail
-        } finally {
-          setLoadingRecent(false);
-        }
+        // Order history is collected locally after successful tracks
+        setLoadingRecent(false);
       } else {
         setRecentOrders([]);
       }
