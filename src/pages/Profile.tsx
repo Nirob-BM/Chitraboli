@@ -36,6 +36,7 @@ const Profile = () => {
   if (loading) {
     return (
       <Layout>
+        <SEO title="My Account" description="Manage your Chitraboli account — orders, wishlist, saved addresses, wallet and security settings." url="/profile" />
         <div className="container mx-auto px-4 py-8 pt-24">
           <div className="space-y-6">
             <Skeleton className="h-32 w-full" />
@@ -53,6 +54,7 @@ const Profile = () => {
 
   return (
     <Layout>
+      <SEO title="My Account" description="Manage your Chitraboli account — orders, wishlist, saved addresses, wallet and security settings." url="/profile" />
       <SEO title="My Account" description="Manage your Chitraboli account — orders, wishlist, saved addresses, wallet and security settings." url="/profile" />
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-8 pt-24">
         <div className="container mx-auto px-4">

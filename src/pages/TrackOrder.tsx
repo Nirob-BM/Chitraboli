@@ -262,6 +262,7 @@ const TrackOrder = () => {
   return (
     <Layout>
       <SEO title="Track Your Order" description="Track your Chitraboli handcrafted jewellery order in real time using your order ID and phone number." url="/track-order" />
+      <SEO title="Track Your Order" description="Track your Chitraboli handcrafted jewellery order in real time using your order ID and phone number." url="/track-order" />
       {/* Track Order Section */}
       <div className="min-h-screen bg-background py-12">
         <div className="container mx-auto px-4 max-w-3xl">

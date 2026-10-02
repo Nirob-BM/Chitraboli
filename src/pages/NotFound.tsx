@@ -7,6 +7,7 @@ import { Home, ArrowLeft } from "lucide-react";
 const NotFound = () => {
   return (
     <Layout>
+      <SEO title="Page Not Found" description="The page you were looking for could not be found. Browse Chitraboli's handcrafted jewellery collection instead." />
       <SEO title="Page Not Found" description="The page you were looking for could not be found. Browse Chitraboli's handcrafted jewellery collection instead." url="" />
       <section className="min-h-[70vh] flex items-center justify-center gradient-hero">
         <div className="container mx-auto px-4 text-center">
