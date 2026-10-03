@@ -68,7 +68,6 @@ const ResetPassword = () => {
   return (
     <Layout>
       <SEO title="Reset Password" description="Set a new password for your Chitraboli account securely." url="/reset-password" />
-      <SEO title="Reset Password" description="Set a new password for your Chitraboli account securely." url="/reset-password" />
       <div className="min-h-screen flex items-center justify-center py-12 px-4">
         <Card className="w-full max-w-md bg-card border-border">
           <CardHeader className="text-center">
