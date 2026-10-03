@@ -90,8 +90,14 @@ export const CollectionGridSkeleton = () => (
 
 // Generic page skeleton for lazy loading fallback
 export const PageSkeleton = () => (
-  <div className="min-h-screen bg-background">
-    <HeroSkeleton />
-    <FeaturesSkeleton />
+  <div
+    className="relative min-h-[calc(100vh-5rem)] bg-background"
+    role="status"
+    aria-label="Loading page"
+  >
+    <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden bg-muted">
+      <div className="route-loading-bar h-full w-1/3 bg-primary" />
+    </div>
+    <span className="sr-only">Loading page</span>
   </div>
 );
