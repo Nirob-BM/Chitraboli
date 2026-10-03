@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
@@ -14,6 +14,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SkipToContent } from "@/components/SkipToContent";
 import { PageSkeleton } from "@/components/PageSkeleton";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { preloadRoute, routeLoaders } from "@/lib/routePreload";
 
 // Defer the AI Assistant chunk (TTS/voice/chat state) until the browser is idle,
 // so it never blocks the homepage's initial paint, TBT, or LCP. Rendered globally
@@ -45,23 +46,21 @@ function DeferredAIAssistant() {
 }
 
 // Lazy load pages for better performance (code splitting)
-const Index = lazy(() => import("./pages/Index"));
-const Shop = lazy(() => import("./pages/Shop"));
-const Collections = lazy(() => import("./pages/Collections"));
-const About = lazy(() => import("./pages/About"));
-const Contact = lazy(() => import("./pages/Contact"));
-const Admin = lazy(() => import("./pages/Admin"));
-const Auth = lazy(() => import("./pages/Auth"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const TrackOrder = lazy(() => import("./pages/TrackOrder"));
-const PaymentReturn = lazy(() => import("./pages/PaymentReturn"));
-const ProductDetail = lazy(() => import("./pages/ProductDetail"));
-const Profile = lazy(() => import("./pages/Profile"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const Trust = lazy(() => import("./pages/Trust"));
-const BlogIdentifyingHandcraftedJewelry = lazy(
-  () => import("./pages/BlogIdentifyingHandcraftedJewelry")
-);
+const Index = lazy(routeLoaders.home);
+const Shop = lazy(routeLoaders.shop);
+const Collections = lazy(routeLoaders.collections);
+const About = lazy(routeLoaders.about);
+const Contact = lazy(routeLoaders.contact);
+const Admin = lazy(routeLoaders.admin);
+const Auth = lazy(routeLoaders.auth);
+const ResetPassword = lazy(routeLoaders.resetPassword);
+const TrackOrder = lazy(routeLoaders.trackOrder);
+const PaymentReturn = lazy(routeLoaders.paymentReturn);
+const ProductDetail = lazy(routeLoaders.product);
+const Profile = lazy(routeLoaders.profile);
+const NotFound = lazy(routeLoaders.notFound);
+const Trust = lazy(routeLoaders.trust);
+const BlogIdentifyingHandcraftedJewelry = lazy(routeLoaders.blog);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -77,6 +76,30 @@ const queryClient = new QueryClient({
 const ADSENSE_PUBLISHER_ID = import.meta.env.VITE_ADSENSE_PUBLISHER_ID || "";
 
 const AppContent = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const preloadLink = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const anchor = target.closest("a[href]");
+      if (!(anchor instanceof HTMLAnchorElement) || anchor.origin !== window.location.origin) return;
+
+      preloadRoute(anchor.pathname);
+    };
+
+    document.addEventListener("pointerover", preloadLink, { passive: true });
+    document.addEventListener("focusin", preloadLink);
+    document.addEventListener("touchstart", preloadLink, { passive: true });
+
+    return () => {
+      document.removeEventListener("pointerover", preloadLink);
+      document.removeEventListener("focusin", preloadLink);
+      document.removeEventListener("touchstart", preloadLink);
+    };
+  }, []);
+
   return (
     <>
       <SkipToContent />
@@ -84,7 +107,8 @@ const AppContent = () => {
       <ScrollToTop />
       <main id="main-content">
         <Suspense fallback={<PageSkeleton />}>
-          <Routes>
+          <div key={location.pathname} className="route-enter">
+          <Routes location={location}>
             <Route path="/" element={<Index />} />
             <Route path="/shop" element={<Shop />} />
             <Route path="/product/:id" element={<ProductDetail />} />
@@ -104,6 +128,7 @@ const AppContent = () => {
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </div>
         </Suspense>
       </main>
       <CartDrawer />
