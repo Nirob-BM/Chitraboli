@@ -15,7 +15,7 @@ import { SEO } from "@/components/SEO";
 
 interface Product {
   id: string;
-  slug: string;
+  slug: string | null;
   name: string;
   price: number;
   image_url: string | null;
@@ -175,7 +175,7 @@ const ProductDetail = () => {
                       availability: product.in_stock
                         ? "https://schema.org/InStock"
                         : "https://schema.org/OutOfStock",
-                      url: `https://chitraboli.lovable.app/product/${product.slug}`,
+                      url: `https://chitraboli.lovable.app/product/${product.slug ?? product.id}`,
                     },
                   })
                     .replace(/</g, "\\u003c")

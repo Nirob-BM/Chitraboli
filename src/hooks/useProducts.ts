@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface Product {
   id: string;
-  slug: string;
+  slug: string | null;
   name: string;
   price: number;
   image_url: string | null;
