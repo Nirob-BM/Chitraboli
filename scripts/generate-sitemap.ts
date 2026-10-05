@@ -41,14 +41,14 @@ async function fetchProductEntries(): Promise<SitemapEntry[]> {
     const supabase = createClient(url, key);
     const { data, error } = await supabase
       .from("products")
-      .select("id, updated_at")
+      .select("id, slug, updated_at")
       .order("updated_at", { ascending: false });
     if (error) {
       console.warn("[sitemap] Failed to fetch products:", error.message);
       return [];
     }
     return (data ?? []).map((p: { id: string; updated_at: string | null }) => ({
-      path: `/product/${p.id}`,
+      path: `/product/${p.slug ?? p.id}`,
       lastmod: p.updated_at ? new Date(p.updated_at).toISOString().split("T")[0] : undefined,
       changefreq: "weekly" as const,
       priority: "0.7",

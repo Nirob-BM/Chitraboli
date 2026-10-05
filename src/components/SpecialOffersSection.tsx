@@ -68,6 +68,7 @@ export const SpecialOffersSection = () => {
               </div>
               <ProductCard
                 id={product.id}
+                slug={product.slug}
                 name={product.name}
                 price={product.price}
                 image={product.image_url || "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600"}

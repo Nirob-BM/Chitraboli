@@ -42,7 +42,7 @@ export function useWishlist() {
         const productIds = wishlistData.map(item => item.product_id);
         const { data: productsData, error: productsError } = await supabase
           .from('products')
-          .select('id, name, price, image_url, category, in_stock')
+          .select('id, slug, name, price, image_url, category, in_stock')
           .in('id', productIds);
 
         if (productsError) throw productsError;

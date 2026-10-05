@@ -15,6 +15,7 @@ import { SEO } from "@/components/SEO";
 
 interface Product {
   id: string;
+  slug: string;
   name: string;
   price: number;
   image_url: string | null;
@@ -48,7 +49,7 @@ const ProductDetailSkeleton = () => (
 );
 
 const ProductDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const { addItem } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,13 +60,14 @@ const ProductDetail = () => {
 
   useEffect(() => {
     const fetchProduct = async () => {
-      if (!id) return;
+      if (!slug) return;
+      const isUuid = /^[0-9a-f-]{36}$/i.test(slug);
       
       try {
         const { data, error } = await supabase
           .from("products")
           .select("*")
-          .eq("id", id)
+          .eq(isUuid ? "id" : "slug", slug)
           .single();
 
         if (error) throw error;
@@ -87,7 +89,7 @@ const ProductDetail = () => {
     };
 
     fetchProduct();
-  }, [id]);
+  }, [slug]);
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -173,7 +175,7 @@ const ProductDetail = () => {
                       availability: product.in_stock
                         ? "https://schema.org/InStock"
                         : "https://schema.org/OutOfStock",
-                      url: `https://chitraboli.lovable.app/product/${product.id}`,
+                      url: `https://chitraboli.lovable.app/product/${product.slug}`,
                     },
                   })
                     .replace(/</g, "\\u003c")

@@ -82,7 +82,7 @@ export function ProfileWishlist() {
               className="bg-card/50 backdrop-blur border-border/50 overflow-hidden group hover:border-primary/30 transition-colors"
             >
               {/* Product Image */}
-              <Link to={`/product/${product.id}`} className="block">
+              <Link to={`/product/${product.slug ?? product.id}`} className="block">
                 <div className="aspect-square relative overflow-hidden bg-muted">
                   {product.image_url ? (
                     <img 
@@ -117,7 +117,7 @@ export function ProfileWishlist() {
                 {/* Product Info */}
                 <div>
                   <Link 
-                    to={`/product/${product.id}`}
+                    to={`/product/${product.slug ?? product.id}`}
                     className="font-medium text-sm hover:text-primary transition-colors line-clamp-1"
                   >
                     {product.name}
