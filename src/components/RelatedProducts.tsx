@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface RelatedProduct {
   id: string;
+  slug: string | null;
   name: string;
   price: number;
   image_url: string | null;

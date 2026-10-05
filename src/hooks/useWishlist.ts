@@ -13,6 +13,7 @@ export interface WishlistItem {
   // Joined product data
   product?: {
     id: string;
+    slug?: string | null;
     name: string;
     price: number;
     image_url: string | null;
