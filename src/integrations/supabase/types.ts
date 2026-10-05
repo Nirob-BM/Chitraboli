@@ -711,6 +711,7 @@ export type Database = {
           price: number
           sizes: string[] | null
           sku: string | null
+          slug: string | null
           stock_quantity: number | null
           updated_at: string
         }
@@ -729,6 +730,7 @@ export type Database = {
           price: number
           sizes?: string[] | null
           sku?: string | null
+          slug?: string | null
           stock_quantity?: number | null
           updated_at?: string
         }
@@ -747,6 +749,7 @@ export type Database = {
           price?: number
           sizes?: string[] | null
           sku?: string | null
+          slug?: string | null
           stock_quantity?: number | null
           updated_at?: string
         }
@@ -1208,6 +1211,7 @@ export type Database = {
         }
         Returns: string
       }
+      slugify: { Args: { _text: string }; Returns: string }
       track_order: {
         Args: { order_id: string; phone_number: string }
         Returns: {

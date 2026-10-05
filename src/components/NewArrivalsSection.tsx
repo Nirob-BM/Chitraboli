@@ -61,6 +61,7 @@ export function NewArrivalsSection() {
                   </div>
                   <ProductCard
                     id={product.id}
+                    slug={product.slug}
                     name={product.name}
                     price={product.price}
                     image={product.image_url || "/placeholder.svg"}

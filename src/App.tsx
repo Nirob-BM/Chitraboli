@@ -111,7 +111,7 @@ const AppContent = () => {
           <Routes location={location}>
             <Route path="/" element={<Index />} />
             <Route path="/shop" element={<Shop />} />
-            <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/product/:slug" element={<ProductDetail />} />
             <Route path="/collections" element={<Collections />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />

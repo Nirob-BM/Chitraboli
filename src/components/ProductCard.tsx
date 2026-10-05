@@ -7,6 +7,7 @@ import { toast } from "@/hooks/use-toast";
 
 interface ProductCardProps {
   id: string | number;
+  slug?: string | null;
   name: string;
   price: number;
   image: string;
@@ -17,7 +18,7 @@ interface ProductCardProps {
 }
 
 export const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
-  ({ id, name, price, image, category, sizes, colors, stockQuantity }, ref) => {
+  ({ id, slug, name, price, image, category, sizes, colors, stockQuantity }, ref) => {
     const { addItem } = useCart();
 
     const handleAddToCart = (e: React.MouseEvent) => {
@@ -36,7 +37,7 @@ export const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
     };
 
     return (
-      <Link to={`/product/${id}`}>
+      <Link to={`/product/${slug || id}`}>
         <div
           ref={ref}
           className="group relative bg-card rounded-lg overflow-hidden border border-border/50 hover:border-primary/30 transition-all duration-500 hover:shadow-gold cursor-pointer"

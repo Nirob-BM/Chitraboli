@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface RelatedProduct {
   id: string;
+  slug: string | null;
   name: string;
   price: number;
   image_url: string | null;
@@ -42,7 +43,7 @@ export const RelatedProducts = ({
       try {
         const { data, error } = await supabase
           .from("products")
-          .select("id, name, price, image_url, images, category, colors, featured, in_stock")
+          .select("id, slug, name, price, image_url, images, category, colors, featured, in_stock")
           .eq("category", category)
           .neq("id", currentProductId)
           .limit(12);
@@ -136,6 +137,7 @@ export const RelatedProducts = ({
               >
                 <ProductCard
                   id={p.id}
+                  slug={p.slug}
                   name={p.name}
                   price={p.price}
                   image={p.image_url || p.images?.[0] || FALLBACK_IMAGE}
