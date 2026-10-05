@@ -21,28 +21,18 @@ export function NewArrivalsSection() {
 
       <div className="container mx-auto px-4 relative z-10">
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-16">
-          <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-primary">Just Dropped</span>
-            </div>
-            <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-light text-foreground">
-              New{" "}
-              <span className="text-gold font-medium italic">Arrivals</span>
-            </h2>
-            <p className="text-muted-foreground max-w-md text-lg">
-              Discover our latest handcrafted pieces, fresh from our artisans' workshop
-            </p>
+        <div className="space-y-4 mb-16">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-primary">Just Dropped</span>
           </div>
-          
-          <Button variant="outline" size="lg" className="group self-start md:self-auto" asChild>
-            <Link to="/shop">
-              <Clock className="mr-2 h-4 w-4 transition-transform group-hover:rotate-12" />
-              Shop All New
-              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-          </Button>
+          <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-light text-foreground">
+            New{" "}
+            <span className="text-gold font-medium italic">Arrivals</span>
+          </h2>
+          <p className="text-muted-foreground max-w-md text-lg">
+            Discover our latest handcrafted pieces, fresh from our artisans' workshop
+          </p>
         </div>
 
         {/* Products Grid */}
@@ -87,6 +77,17 @@ export function NewArrivalsSection() {
             <p className="text-muted-foreground/70 text-sm mt-2">Check back for our latest creations</p>
           </div>
         )}
+
+        {/* Shop All New — centered beneath the product grid */}
+        <div className="mt-12 flex justify-center">
+          <Button variant="outline" size="lg" className="group" asChild>
+            <Link to="/shop">
+              <Clock className="mr-2 h-4 w-4 transition-transform group-hover:rotate-12" />
+              Shop All New
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </Button>
+        </div>
 
         {/* Bottom decorative line */}
         <div className="mt-16 flex items-center justify-center gap-4">
