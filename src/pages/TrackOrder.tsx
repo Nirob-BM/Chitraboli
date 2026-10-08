@@ -12,9 +12,7 @@ import { Search, Package, Truck, CheckCircle, XCircle, Clock, AlertCircle, Shiel
 import { toast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDeliveryNotifications } from "@/hooks/useDeliveryNotifications";
-
-// Lazy load the map component
-const DeliveryMap = lazy(() => import("@/components/DeliveryMap"));
+import { TrackingDashboard } from "@/components/track/TrackingDashboard";
 
 interface OrderItem {
   name?: string;
@@ -276,7 +274,7 @@ const TrackOrder = () => {
       <SEO title="Track Your Order" description="Track your Chitraboli handcrafted jewellery order in real time using your order ID and phone number." url="/track-order" />
       {/* Track Order Section */}
       <div className="min-h-screen bg-background py-12">
-        <div className="container mx-auto px-4 max-w-3xl">
+        <div className="container mx-auto px-4 max-w-2xl">
           <div className="text-center mb-10">
             <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4">
               Track Your Order
@@ -364,215 +362,10 @@ const TrackOrder = () => {
           {searched && !loading && (
             <>
               {order ? (
-                <div className="space-y-6">
-                  {/* Status Timeline */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span>Order Status</span>
-                        <Badge className={getStatusInfo(order.status).color}>
-                          {getStatusInfo(order.status).label}
-                        </Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {order.status === 'cancelled' ? (
-                        <div className="flex items-center gap-3 text-red-500 bg-red-500/10 p-4 rounded-lg">
-                          <XCircle className="w-6 h-6" />
-                          <span className="font-medium">This order has been cancelled</span>
-                        </div>
-                      ) : (
-                        <div className="relative">
-                          <div className="flex justify-between">
-                            {getStatusSteps(order.status).map((step) => {
-                              const Icon = step.icon;
-                              return (
-                                <div key={step.value} className="flex flex-col items-center flex-1">
-                                  <div
-                                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                                      step.completed || step.current
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'bg-muted text-muted-foreground'
-                                    }`}
-                                  >
-                                    <Icon className="w-5 h-5" />
-                                  </div>
-                                  <span className={`text-xs mt-2 text-center ${
-                                    step.completed || step.current ? 'text-foreground font-medium' : 'text-muted-foreground'
-                                  }`}>
-                                    {step.label}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          {/* Progress line */}
-                          <div className="absolute top-5 left-0 right-0 h-0.5 bg-muted -z-10 mx-8">
-                            <div
-                              className="h-full bg-primary transition-all"
-                              style={{
-                                width: `${
-                                  (ORDER_STATUSES.findIndex(s => s.value === order.status) / 
-                                  (ORDER_STATUSES.length - 2)) * 100
-                                }%`
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Delivery Rider Info with Live Map */}
-                  {order.rider_name && (order.status === 'shipped' || order.status === 'confirmed') && (
-                    <Card className="border-primary/30 bg-primary/5">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Truck className="w-5 h-5 text-primary" />
-                          Delivery Rider
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center">
-                            {order.rider_vehicle_type === 'motorcycle' ? (
-                              <Bike className="w-7 h-7 text-primary" />
-                            ) : order.rider_vehicle_type === 'car' ? (
-                              <Car className="w-7 h-7 text-primary" />
-                            ) : (
-                              <User className="w-7 h-7 text-primary" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-semibold text-lg">{order.rider_name}</p>
-                            <p className="text-sm text-muted-foreground capitalize">
-                              {order.rider_vehicle_type || 'Delivery Partner'}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        {order.rider_phone && (
-                          <a 
-                            href={`tel:${order.rider_phone}`}
-                            className="flex items-center justify-center gap-2 w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
-                          >
-                            <Phone className="w-4 h-4" />
-                            Call Rider: {order.rider_phone}
-                          </a>
-                        )}
-
-                        {/* ETA Display */}
-                        {etaMinutes !== null && distanceKm !== null && (
-                          <div className="flex items-center justify-center gap-4 p-3 bg-primary/10 rounded-lg">
-                            <div className="flex items-center gap-2">
-                              <Timer className="w-5 h-5 text-primary" />
-                              <div>
-                                <p className="text-lg font-bold text-primary">
-                                  {etaMinutes < 60 ? `${etaMinutes} min` : `${Math.floor(etaMinutes / 60)}h ${etaMinutes % 60}m`}
-                                </p>
-                                <p className="text-xs text-muted-foreground">Estimated arrival</p>
-                              </div>
-                            </div>
-                            <div className="w-px h-10 bg-border" />
-                            <div className="text-center">
-                              <p className="text-lg font-bold text-foreground">{distanceKm} km</p>
-                              <p className="text-xs text-muted-foreground">Distance</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Live Tracking Map */}
-                        {order.status === 'shipped' && order.rider_id && (
-                          <div className="pt-2">
-                            <div className="flex items-center gap-2 mb-3">
-                              <MapPin className="w-4 h-4 text-primary" />
-                              <span className="text-sm font-medium">Live Location</span>
-                            </div>
-                            <Suspense fallback={
-                              <Skeleton className="w-full h-64 rounded-lg" />
-                            }>
-                              <DeliveryMap 
-                                riderId={order.rider_id} 
-                                riderName={order.rider_name || 'Delivery Rider'}
-                                riderVehicleType={order.rider_vehicle_type || 'motorcycle'}
-                                onETAUpdate={handleETAUpdate}
-                              />
-                            </Suspense>
-                          </div>
-                        )}
-                        
-                        {order.rider_assigned_at && (
-                          <p className="text-xs text-center text-muted-foreground">
-                            Assigned on {formatDate(order.rider_assigned_at)}
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Order Details */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Order Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Order ID</span>
-                          <p className="font-mono text-xs break-all">{order.id}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Order Date</span>
-                          <p>{formatDate(order.created_at)}</p>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-muted-foreground">Customer Name</span>
-                          <p>{order.customer_name}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Order Items */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Order Items</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {order.items.map((item, index) => {
-                          const normalized = normalizeOrderItem(item);
-                          return (
-                            <div key={index} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
-                              {normalized.image && (
-                                <img
-                                  src={normalized.image}
-                                  alt={normalized.name}
-                                  className="w-16 h-16 object-cover rounded"
-                                />
-                              )}
-                              <div className="flex-1">
-                                <p className="font-medium">{normalized.name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  Qty: {normalized.quantity}
-                                </p>
-                              </div>
-                              <p className="font-medium">
-                                ₹{(normalized.price * normalized.quantity).toLocaleString()}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="border-t mt-4 pt-4 flex justify-between items-center">
-                        <span className="font-medium">Total Amount</span>
-                        <span className="text-xl font-bold text-primary">
-                          ₹{order.total_amount.toLocaleString()}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                <TrackingDashboard
+                  order={{ ...order, items: order.items.map(normalizeOrderItem) }}
+                  onETAUpdate={handleETAUpdate}
+                />
               ) : (
                 <Card>
                   <CardContent className="py-12 text-center">
