@@ -180,24 +180,15 @@ const handler = async (req: Request): Promise<Response> => {
     const result = await response.json();
 
     if (!response.ok) {
-      // Handle known Twilio limitations gracefully (e.g., international SMS restrictions)
-      const knownLimitationCodes = [21612, 21614, 21211, 21408, 21610];
-      if (knownLimitationCodes.includes(result.code)) {
-        console.warn("SMS skipped due to provider limitation:", result.code, result.message);
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            skipped: true, 
-            reason: "SMS service limitation - order completed without SMS notification" 
-          }),
-          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
-      }
-      
-      console.error("Twilio error:", result);
+      // Any provider rejection (e.g. 21659 sender/country mismatch) must not break checkout
+      console.warn("SMS skipped due to provider error:", result?.code, result?.message);
       return new Response(
-        JSON.stringify({ error: "Failed to send SMS" }),
-        { status: response.status, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        JSON.stringify({
+          success: true,
+          skipped: true,
+          reason: "SMS service limitation - order completed without SMS notification",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
