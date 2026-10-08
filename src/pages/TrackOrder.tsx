@@ -217,6 +217,11 @@ const TrackOrder = () => {
         });
       } else {
         setOrder(null);
+        toast({
+          title: "Order not found",
+          description: result.error || "Please verify your order ID and phone number.",
+          variant: "destructive"
+        });
       }
     } catch (error: any) {
       console.error('Error fetching order:', error);
