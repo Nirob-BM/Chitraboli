@@ -181,9 +181,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!response.ok) {
       // Handle known Twilio limitations gracefully (e.g., international SMS restrictions)
-      const knownLimitationCodes = [21612, 21614, 21211, 21408, 21610];
-      if (knownLimitationCodes.includes(result.code)) {
-        console.warn("SMS skipped due to provider limitation:", result.code, result.message);
+      // Any provider rejection (e.g. 21659 sender/country mismatch) must not break checkout
+      {
+        console.warn("SMS skipped due to provider error:", result?.code, result?.message);
         return new Response(
           JSON.stringify({ 
             success: true, 
