@@ -138,11 +138,12 @@ serve(async (req) => {
       console.log(`Order not found for ID: ${orderId.trim().substring(0, 8)}***`);
       return new Response(
         JSON.stringify({ 
+          success: false,
           error: 'Order not found. Please check your order ID and phone number.',
           code: 'NOT_FOUND' 
         }),
         { 
-          status: 404, 
+          status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );

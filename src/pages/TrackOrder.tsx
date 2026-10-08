@@ -190,7 +190,14 @@ const TrackOrder = () => {
           setOrder(null);
           return;
         }
-        throw new Error(result.error || 'Order not found');
+        // Expected outcomes (not found / invalid input) — show a friendly message, don't treat as a crash
+        setOrder(null);
+        toast({
+          title: response.status === 404 ? "Order not found" : "Couldn't track order",
+          description: result.error || "Please verify your order ID and phone number.",
+          variant: "destructive"
+        });
+        return;
       }
 
       if (result.success && result.order) {
@@ -210,6 +217,11 @@ const TrackOrder = () => {
         });
       } else {
         setOrder(null);
+        toast({
+          title: "Order not found",
+          description: result.error || "Please verify your order ID and phone number.",
+          variant: "destructive"
+        });
       }
     } catch (error: any) {
       console.error('Error fetching order:', error);
