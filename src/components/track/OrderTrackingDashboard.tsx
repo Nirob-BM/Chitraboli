@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Truck, Package, ClipboardList, Home, ChevronRight, ChevronDown, MapPin, XCircle, Copy } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -71,6 +71,19 @@ export function OrderTrackingDashboard({ order, children }: { order: TrackedOrde
   };
 
   const progressPct = cancelled ? 0 : (current / (STEPS.length - 1)) * 100;
+  const pathRef = useRef<SVGPathElement>(null);
+  const [truckPt, setTruckPt] = useState({ x: 50, y: 130 });
+  useEffect(() => {
+    const p = pathRef.current;
+    if (!p) return;
+    const pt = p.getPointAtLength((p.getTotalLength() * progressPct) / 100);
+    setTruckPt({ x: pt.x, y: pt.y });
+  }, [progressPct]);
+  const mapMessage =
+    order.status === "delivered" ? "Your package was delivered"
+    : order.status === "shipped" ? "Your package is on the way"
+    : order.status === "confirmed" ? "Your order is being prepared"
+    : "Order received";
 
   return (
     <div className="animate-fade-up space-y-5">
@@ -146,26 +159,26 @@ export function OrderTrackingDashboard({ order, children }: { order: TrackedOrde
         {/* Route map */}
         {!cancelled && (
           <div className="relative overflow-hidden rounded-xl border border-border bg-background">
-            <svg viewBox="0 0 600 180" className="h-40 w-full sm:h-48" aria-hidden="true">
+            <svg viewBox="0 0 600 180" preserveAspectRatio="none" className="h-40 w-full sm:h-48" aria-hidden="true">
               <defs>
                 <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
                   <path d="M24 0H0V24" fill="none" className="stroke-border" strokeWidth="1" />
                 </pattern>
               </defs>
               <rect width="600" height="180" fill="url(#grid)" opacity="0.6" />
-              <path id="route" d="M50 130 C150 40, 250 160, 340 90 S500 40, 550 70" fill="none" className="stroke-muted" strokeWidth="4" strokeLinecap="round" strokeDasharray="2 10" />
+              <path ref={pathRef} d="M50 130 C150 40, 250 160, 340 90 S500 40, 550 70" fill="none" className="stroke-muted" strokeWidth="4" strokeLinecap="round" strokeDasharray="2 10" />
               <path d="M50 130 C150 40, 250 160, 340 90 S500 40, 550 70" fill="none" className="stroke-primary" strokeWidth="4" strokeLinecap="round" pathLength={100} strokeDasharray={`${progressPct} 100`} style={{ filter: "drop-shadow(0 0 6px hsl(var(--primary)))" }} />
               <circle cx="50" cy="130" r="7" className="fill-primary" />
             </svg>
             <div className="absolute right-[6%] top-[22%] text-primary"><MapPin className="h-7 w-7" /></div>
             <div
-              className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary p-2 text-primary-foreground shadow-gold transition-all duration-700"
-              style={{ left: `${10 + progressPct * 0.8}%` }}
+              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary p-2 text-primary-foreground shadow-gold transition-all duration-700"
+              style={{ left: `${(truckPt.x / 600) * 100}%`, top: `${(truckPt.y / 180) * 100}%` }}
             >
               <Truck className="h-4 w-4" />
             </div>
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-border bg-card/80 px-4 py-1.5 text-xs sm:text-sm backdrop-blur">
-              <span className="text-foreground">{order.status === "delivered" ? "Your package was delivered" : "Your package is on the way"}</span>
+              <span className="text-foreground">{mapMessage}</span>
               {order.status !== "delivered" && (
                 <span className="text-muted-foreground"> | {daysLeft > 0 ? `Arriving in ${daysLeft} day${daysLeft > 1 ? "s" : ""}` : "Arriving soon"}</span>
               )}
