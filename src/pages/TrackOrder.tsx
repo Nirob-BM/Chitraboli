@@ -12,6 +12,7 @@ import { Search, Package, Truck, CheckCircle, XCircle, Clock, AlertCircle, Shiel
 import { toast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDeliveryNotifications } from "@/hooks/useDeliveryNotifications";
+import { OrderTrackingDashboard } from "@/components/track/OrderTrackingDashboard";
 
 // Lazy load the map component
 const DeliveryMap = lazy(() => import("@/components/DeliveryMap"));
@@ -364,64 +365,10 @@ const TrackOrder = () => {
           {searched && !loading && (
             <>
               {order ? (
-                <div className="space-y-6">
-                  {/* Status Timeline */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span>Order Status</span>
-                        <Badge className={getStatusInfo(order.status).color}>
-                          {getStatusInfo(order.status).label}
-                        </Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {order.status === 'cancelled' ? (
-                        <div className="flex items-center gap-3 text-red-500 bg-red-500/10 p-4 rounded-lg">
-                          <XCircle className="w-6 h-6" />
-                          <span className="font-medium">This order has been cancelled</span>
-                        </div>
-                      ) : (
-                        <div className="relative">
-                          <div className="flex justify-between">
-                            {getStatusSteps(order.status).map((step) => {
-                              const Icon = step.icon;
-                              return (
-                                <div key={step.value} className="flex flex-col items-center flex-1">
-                                  <div
-                                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                                      step.completed || step.current
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'bg-muted text-muted-foreground'
-                                    }`}
-                                  >
-                                    <Icon className="w-5 h-5" />
-                                  </div>
-                                  <span className={`text-xs mt-2 text-center ${
-                                    step.completed || step.current ? 'text-foreground font-medium' : 'text-muted-foreground'
-                                  }`}>
-                                    {step.label}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          {/* Progress line */}
-                          <div className="absolute top-5 left-0 right-0 h-0.5 bg-muted -z-10 mx-8">
-                            <div
-                              className="h-full bg-primary transition-all"
-                              style={{
-                                width: `${
-                                  (ORDER_STATUSES.findIndex(s => s.value === order.status) / 
-                                  (ORDER_STATUSES.length - 2)) * 100
-                                }%`
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                <OrderTrackingDashboard
+                  order={{ ...order, items: order.items.map(normalizeOrderItem) }}
+                >
+
 
                   {/* Delivery Rider Info with Live Map */}
                   {order.rider_name && (order.status === 'shipped' || order.status === 'confirmed') && (
@@ -510,69 +457,7 @@ const TrackOrder = () => {
                     </Card>
                   )}
 
-                  {/* Order Details */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Order Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Order ID</span>
-                          <p className="font-mono text-xs break-all">{order.id}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Order Date</span>
-                          <p>{formatDate(order.created_at)}</p>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-muted-foreground">Customer Name</span>
-                          <p>{order.customer_name}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Order Items */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Order Items</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {order.items.map((item, index) => {
-                          const normalized = normalizeOrderItem(item);
-                          return (
-                            <div key={index} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
-                              {normalized.image && (
-                                <img
-                                  src={normalized.image}
-                                  alt={normalized.name}
-                                  className="w-16 h-16 object-cover rounded"
-                                />
-                              )}
-                              <div className="flex-1">
-                                <p className="font-medium">{normalized.name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  Qty: {normalized.quantity}
-                                </p>
-                              </div>
-                              <p className="font-medium">
-                                ₹{(normalized.price * normalized.quantity).toLocaleString()}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="border-t mt-4 pt-4 flex justify-between items-center">
-                        <span className="font-medium">Total Amount</span>
-                        <span className="text-xl font-bold text-primary">
-                          ₹{order.total_amount.toLocaleString()}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                </OrderTrackingDashboard>
               ) : (
                 <Card>
                   <CardContent className="py-12 text-center">
