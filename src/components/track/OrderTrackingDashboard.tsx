@@ -234,7 +234,7 @@ export function OrderTrackingDashboard({ order, children }: { order: TrackedOrde
         </div>
 
         {/* Order details */}
-        <div className={cn("grid transition-all duration-300", detailsOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
+        <div className={cn("grid transition-all duration-300", detailsOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr] -mt-7")}>
           <div className="overflow-hidden space-y-3">
             {order.items.map((it, i) => (
               <div key={i} className="flex items-center gap-3 rounded-xl bg-muted/40 p-3">
