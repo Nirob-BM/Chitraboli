@@ -101,7 +101,7 @@ const Index = () => {
                   sizes="(min-width: 1024px) 46vw, 80vw"
                   alt="Handcrafted Chitraboli necklace with clay sitar motif, orange flowers and matching stud earrings"
                   width={880}
-                  height={1174}
+                  height={1179}
                   fetchPriority="high"
                   loading="eager"
                   decoding="sync"
