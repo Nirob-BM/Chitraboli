@@ -92,28 +92,20 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Right: product image with 3D depth */}
+            {/* Right: product image, blending into the dark hero backdrop */}
             <div className="relative order-1 lg:order-2 flex justify-center lg:justify-end animate-fade-up">
-              <div className="relative w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px] lg:max-w-none aspect-square">
-                {/* Soft radial halo behind product */}
-                <div
-                  className="absolute inset-[8%] rounded-full blur-3xl opacity-75"
-                  style={{
-                    background:
-                      "radial-gradient(circle at center, hsl(var(--gold) / 0.38), hsl(var(--primary) / 0.18) 45%, transparent 70%)",
-                  }}
-                />
+              <div className="relative w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px] lg:max-w-none lg:w-[46vw] lg:max-w-[720px] aspect-[3/4] lg:-mt-28 lg:-mr-4 xl:-mr-8 pointer-events-none">
                 <img
                   src={heroLarge.url}
                   srcSet={`${heroSmall.url} 440w, ${heroLarge.url} 880w`}
-                  sizes="(min-width: 1024px) 440px, 80vw"
+                  sizes="(min-width: 1024px) 46vw, 80vw"
                   alt="Handcrafted Chitraboli necklace with clay sitar motif, orange flowers and matching stud earrings"
                   width={880}
-                  height={1174}
+                  height={1179}
                   fetchPriority="high"
                   loading="eager"
                   decoding="sync"
-                  className="relative z-10 w-full h-full object-contain drop-shadow-[0_30px_60px_rgba(0,0,0,0.6)] lg:rotate-[-3deg] transition-transform duration-700 hover:rotate-0 hover:scale-[1.02]"
+                  className="relative z-10 w-full h-full object-contain drop-shadow-[0_25px_50px_rgba(0,0,0,0.5)] transition-transform duration-700 hover:scale-[1.02]"
                 />
               </div>
             </div>
