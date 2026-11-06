@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Loader2, MessageCircle, Banknote, Copy, ChevronLeft, ChevronRight, User, CreditCard, ClipboardCheck } from "lucide-react";
+import { Link } from "react-router-dom";
+import { PackageSearch, Sparkles, CheckCircle, Loader2, MessageCircle, Banknote, Copy, ChevronLeft, ChevronRight, User, CreditCard, ClipboardCheck } from "lucide-react";
 import { formatOrderForWhatsApp } from "@/utils/orderNotification";
 import { z } from "zod";
 import bkashLogo from "@/assets/bkash-logo.png";
@@ -60,6 +61,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
   const [currentStep, setCurrentStep] = useState<Step>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [placedOrder, setPlacedOrder] = useState<{ number: string; total: number; phone: string } | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -246,6 +248,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
       }
 
       const orderData = response.order;
+      const displayOrderId: string = orderData.order_number || orderData.id;
 
       // Automatic wallet payment: hand the customer over to the bKash/Nagad
       // checkout. The gateway redirects back to /payment/return once done.
@@ -291,7 +294,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
       }));
 
       const message = formatOrderForWhatsApp({
-        orderId: orderData.id,
+        orderId: displayOrderId,
         customerName: formData.name,
         customerEmail: formData.email,
         customerPhone: formData.phone,
@@ -312,7 +315,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
         const smsResponse = await supabase.functions.invoke("send-order-sms", {
           body: {
             to: formData.phone,
-            orderId: orderData.id,
+            orderId: displayOrderId,
             customerName: formData.name,
             totalAmount: serverTotalAmount,
             paymentMethod: paymentMethodLabel,
@@ -326,6 +329,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
         console.warn("SMS notification unavailable:", smsError);
       }
 
+      setPlacedOrder({ number: displayOrderId, total: Number(orderData.total_amount) || 0, phone: formData.phone });
       setOrderPlaced(true);
       clearCart();
       clearProgress();
@@ -349,6 +353,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
   const handleClose = () => {
     onOpenChange(false);
     setOrderPlaced(false);
+    setPlacedOrder(null);
     setWhatsappUrl(null);
     setTransactionId("");
     setPaymentMethod("cod");
@@ -384,14 +389,52 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
             <DialogTitle className="sr-only">Order Confirmed</DialogTitle>
             <DialogDescription className="sr-only">Your order has been placed successfully</DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col items-center justify-center py-8">
-            <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mb-4 animate-scale-in">
-              <CheckCircle className="w-12 h-12 text-green-500" />
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <div className="relative mb-5">
+              <span className="absolute inset-0 rounded-full bg-gold/30 animate-ping motion-reduce:animate-none" aria-hidden="true" />
+              <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-gold to-gold/60 flex items-center justify-center shadow-lg animate-scale-in">
+                <CheckCircle className="w-11 h-11 text-background" strokeWidth={2.5} />
+              </div>
+              <Sparkles className="absolute -top-2 -right-3 w-5 h-5 text-gold animate-pulse" aria-hidden="true" />
+              <Sparkles className="absolute -bottom-1 -left-4 w-4 h-4 text-gold/70 animate-pulse" aria-hidden="true" />
             </div>
-            <h2 className="font-display text-2xl text-foreground mb-2">Order Confirmed!</h2>
-            <p className="text-muted-foreground text-center mb-6">
+            <h2 className="font-display text-2xl text-foreground mb-1 animate-fade-in">Order Confirmed!</h2>
+            <p className="text-muted-foreground mb-5 animate-fade-in">
               Thank you for your order. We'll reach out to you soon.
             </p>
+            {placedOrder && (
+              <div className="w-full rounded-xl border border-gold/30 bg-gold/5 p-4 mb-5 animate-fade-up">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Your Order ID</p>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="font-mono text-xl sm:text-2xl font-bold text-gold tracking-wider" data-testid="order-number">
+                    {placedOrder.number}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Copy order ID"
+                    onClick={() => copyToClipboard(placedOrder.number)}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Total ৳{placedOrder.total.toLocaleString()} · Save this ID to track your order with your phone number.
+                </p>
+              </div>
+            )}
+            {placedOrder && (
+              <Button asChild className="w-full mb-3 bg-gold text-background hover:bg-gold/90">
+                <Link
+                  to={`/track-order?id=${encodeURIComponent(placedOrder.number)}&phone=${encodeURIComponent(placedOrder.phone)}`}
+                  onClick={handleClose}
+                >
+                  <PackageSearch className="w-4 h-4 mr-2" />
+                  Track My Order
+                </Link>
+              </Button>
+            )}
             {whatsappUrl && (
               <a
                 href={whatsappUrl}

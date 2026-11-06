@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense, useCallback } from "react";
 import { SEO } from "@/components/SEO";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ interface OrderItem {
 
 interface Order {
   id: string;
+  order_number?: string | null;
   customer_name: string;
   items: OrderItem[];
   total_amount: number;
@@ -64,8 +65,9 @@ const ORDER_STATUSES = [
 ];
 
 const TrackOrder = () => {
-  const [orderId, setOrderId] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [searchParams] = useSearchParams();
+  const [orderId, setOrderId] = useState(() => searchParams.get("id") || "");
+  const [phoneNumber, setPhoneNumber] = useState(() => searchParams.get("phone") || "");
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -205,6 +207,7 @@ const TrackOrder = () => {
         const orderData = result.order;
         setOrder({
           id: orderData.id,
+          order_number: orderData.order_number ?? null,
           customer_name: orderData.customer_name,
           status: orderData.status,
           created_at: orderData.created_at,
@@ -301,7 +304,7 @@ const TrackOrder = () => {
                   <Input
                     id="orderId"
                     type="text"
-                    placeholder="Enter your order ID..."
+                    placeholder="e.g. CHB-261102-A1B2C"
                     value={orderId}
                     onChange={(e) => setOrderId(e.target.value)}
                   />

@@ -18,6 +18,7 @@ export interface DashboardOrderItem {
 
 export interface DashboardOrder {
   id: string;
+  order_number?: string | null;
   customer_name: string;
   customer_phone: string;
   items: DashboardOrderItem[];
@@ -153,7 +154,7 @@ export const AdminDashboard = ({
               >
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">
-                    #{order.id.slice(0, 8)} · {order.customer_name}
+                    {order.order_number || `#${order.id.slice(0, 8)}`} · {order.customer_name}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {money(order.total_amount)} · {(order.payment_method || "cod").toUpperCase()}
@@ -213,7 +214,7 @@ export const AdminDashboard = ({
               >
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-medium text-foreground">#{order.id.slice(0, 8)}</p>
+                    <p className="text-sm font-medium text-foreground">{order.order_number || `#${order.id.slice(0, 8)}`}</p>
                     <Badge variant="outline" className={statusColor(order.status)}>{order.status}</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground truncate">

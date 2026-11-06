@@ -14,7 +14,7 @@ export const formatOrderForWhatsApp = (order: {
 
   const message = `🛒 *NEW ORDER RECEIVED!*
 ━━━━━━━━━━━━━━━━━━
-📋 *Order ID:* ${order.orderId.slice(0, 8)}
+📋 *Order ID:* ${order.orderId.startsWith("CHB-") ? order.orderId : order.orderId.slice(0, 8)}
 
 👤 *Customer Details:*
 Name: ${order.customerName}
