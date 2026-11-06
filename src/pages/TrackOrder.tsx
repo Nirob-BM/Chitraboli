@@ -304,7 +304,7 @@ const TrackOrder = () => {
                   <Input
                     id="orderId"
                     type="text"
-                    placeholder="Enter your order ID..."
+                    placeholder="e.g. CHB-261102-A1B2C"
                     value={orderId}
                     onChange={(e) => setOrderId(e.target.value)}
                   />
