@@ -239,6 +239,7 @@ serve(async (req) => {
         success: true, 
         order: {
           id: order.id,
+          order_number: order.order_number,
           total_amount: order.total_amount,
           items: order.items,
           status: order.status

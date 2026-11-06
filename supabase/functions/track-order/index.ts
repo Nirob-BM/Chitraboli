@@ -84,8 +84,10 @@ serve(async (req) => {
     }
 
     // Basic format validation
-    const orderIdRegex = /^[a-f0-9-]{10,}$/i;
-    if (orderId && !orderIdRegex.test(orderId.trim())) {
+    const orderIdRegex = /^([a-f0-9-]{10,}|CHB-\d{6}-[A-Z0-9]{5})$/i;
+    const cleanId = orderId?.trim().replace(/^#/, '') ?? '';
+    const isOrderNumber = /^CHB-/i.test(cleanId);
+    if (orderId && !orderIdRegex.test(cleanId)) {
       errors.push('Invalid order ID format');
     }
 
@@ -116,6 +118,7 @@ serve(async (req) => {
       .from('orders')
       .select(`
         id,
+        order_number,
         status,
         items,
         total_amount,
@@ -130,7 +133,7 @@ serve(async (req) => {
           vehicle_type
         )
       `)
-      .eq('id', orderId.trim())
+      .eq(isOrderNumber ? 'order_number' : 'id', isOrderNumber ? cleanId.toUpperCase() : cleanId)
       .eq('customer_phone', phoneNumber.trim())
       .single();
 
@@ -153,6 +156,7 @@ serve(async (req) => {
     const riderInfo = data.delivery_riders as any;
     const response = {
       id: data.id,
+      order_number: (data as any).order_number,
       status: data.status,
       items: data.items,
       total_amount: data.total_amount,
