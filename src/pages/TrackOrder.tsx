@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense, useCallback } from "react";
 import { SEO } from "@/components/SEO";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,8 +65,9 @@ const ORDER_STATUSES = [
 ];
 
 const TrackOrder = () => {
-  const [orderId, setOrderId] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [searchParams] = useSearchParams();
+  const [orderId, setOrderId] = useState(() => searchParams.get("id") || "");
+  const [phoneNumber, setPhoneNumber] = useState(() => searchParams.get("phone") || "");
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);

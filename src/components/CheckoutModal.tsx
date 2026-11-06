@@ -353,6 +353,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
   const handleClose = () => {
     onOpenChange(false);
     setOrderPlaced(false);
+    setPlacedOrder(null);
     setWhatsappUrl(null);
     setTransactionId("");
     setPaymentMethod("cod");
