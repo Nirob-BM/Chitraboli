@@ -14,6 +14,7 @@ export interface TrackedItem {
 
 export interface TrackedOrder {
   id: string;
+  order_number?: string | null;
   customer_name: string;
   status: string;
   created_at: string;
@@ -41,7 +42,7 @@ export function OrderTrackingDashboard({ order, children }: { order: TrackedOrde
   const [detailsOpen, setDetailsOpen] = useState(false);
   const cancelled = order.status === "cancelled";
   const current = Math.max(0, STEPS.findIndex((s) => s.key === order.status));
-  const trackingNo = `CHB-${order.id.replace(/-/g, "").slice(0, 10).toUpperCase()}`;
+  const trackingNo = order.order_number || `CHB-${order.id.replace(/-/g, "").slice(0, 10).toUpperCase()}`;
   const first = order.items[0];
   const eta = new Date(new Date(order.created_at).getTime() + 3 * 864e5);
   const daysLeft = Math.max(0, Math.ceil((eta.getTime() - Date.now()) / 864e5));

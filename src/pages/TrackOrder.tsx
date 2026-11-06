@@ -205,6 +205,7 @@ const TrackOrder = () => {
         const orderData = result.order;
         setOrder({
           id: orderData.id,
+          order_number: orderData.order_number ?? null,
           customer_name: orderData.customer_name,
           status: orderData.status,
           created_at: orderData.created_at,

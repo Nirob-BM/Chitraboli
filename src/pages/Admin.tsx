@@ -64,6 +64,7 @@ const normalizeOrderItem = (item: OrderItem) => ({
 
 interface Order {
   id: string;
+  order_number?: string | null;
   customer_name: string;
   customer_email: string;
   customer_phone: string;
@@ -322,7 +323,7 @@ const Admin = () => {
 
       if (error) throw error;
       
-      toast.success(`Order #${order.id.slice(0, 8)} deleted successfully`);
+      toast.success(`Order ${order.order_number || '#' + order.id.slice(0, 8)} deleted successfully`);
       fetchOrders();
     } catch (error: any) {
       toast.error(`Failed to delete order: ${error.message}`);
@@ -392,7 +393,7 @@ const Admin = () => {
       })
       .join('\n');
 
-    const message = `Hi ${order.customer_name}, regarding your order #${order.id.slice(0, 8)}:\n\n${itemsList}\n\nTotal: ৳${order.total_amount.toLocaleString()}`;
+    const message = `Hi ${order.customer_name}, regarding your order ${order.order_number || '#' + order.id.slice(0, 8)}:\n\n${itemsList}\n\nTotal: ৳${order.total_amount.toLocaleString()}`;
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/${order.customer_phone.replace(/[^0-9]/g, '')}?text=${encodedMessage}`, '_blank');
   };
@@ -405,6 +406,7 @@ const Admin = () => {
       order.customer_email.toLowerCase().includes(searchLower) ||
       order.customer_phone.includes(searchQuery) ||
       order.id.toLowerCase().includes(searchLower) ||
+      order.order_number?.toLowerCase().includes(searchLower) ||
       order.transaction_id?.toLowerCase().includes(searchLower);
 
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
@@ -649,7 +651,7 @@ const Admin = () => {
                       </div>
                       <div>
                         <CardTitle className="font-display text-lg">
-                          #{order.id.slice(0, 8)}
+                          {order.order_number || `#${order.id.slice(0, 8)}`}
                         </CardTitle>
                         <p className="text-xs text-muted-foreground flex items-center gap-1 sm:hidden">
                           <Calendar className="w-3 h-3" />
