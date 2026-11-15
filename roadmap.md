@@ -11,3 +11,9 @@
 - Live gateway settlement could not be exercised: bKash gateway reports not configured.
 - Real inventory has zero stock quantities; no quantities were invented or increased. A temporary QA item/order verified checkout and tracking, then was removed.
 - Browser checks passed for signed-in cart merge, three-unit addition, phone rejection, COD confirmation, CHB tracking and mobile fit; six regression tests passed.
+
+# Admin dashboard review fixes (all 30 requested)
+- [x] Customer data erasure and saved notes (1–2).
+- [x] Product form: sizes/colors/stock/SKU, photo handling, upload failures, refresh, validation, errors (3–12, 27).
+- [x] Orders/customers/charts: load errors, paging, paid-only sales, forward-only statuses, per-order spinners, verified success (13–20, 30).
+- [x] Menu, phones and access: collapsed menu, phone slide-over, retry on access check, section in address, unsaved warning, labels, keyboard cards (21–26, 28–29).

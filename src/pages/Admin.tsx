@@ -340,6 +340,19 @@ const Admin = () => {
     unsavedRef.current = true;
   };
 
+  // Forms inside dialogs announce a successful save themselves ("admin-changes-saved");
+  // plain page forms are treated as saved shortly after they submit.
+  const clearUnsavedAfterSave = (e: React.FormEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement)?.closest?.('[role="dialog"]')) return;
+    window.setTimeout(() => { unsavedRef.current = false; }, 1500);
+  };
+
+  useEffect(() => {
+    const onSaved = () => { unsavedRef.current = false; };
+    window.addEventListener('admin-changes-saved', onSaved);
+    return () => window.removeEventListener('admin-changes-saved', onSaved);
+  }, []);
+
   const updatePaymentStatus = async (orderId: string, newPaymentStatus: string) => {
     markBusy(setUpdatingPaymentIds, orderId, true);
     try {
@@ -1238,7 +1251,7 @@ const Admin = () => {
           <div className="p-4 sm:p-6 lg:p-8">
             <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
               <CardContent className="p-4 sm:p-6">
-                <div onInput={trackUnsavedInput} onSubmitCapture={() => { unsavedRef.current = false; }}>
+                <div onInput={trackUnsavedInput} onSubmitCapture={clearUnsavedAfterSave}>
                   {renderContent()}
                 </div>
               </CardContent>

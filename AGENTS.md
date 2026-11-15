@@ -8,3 +8,6 @@
 - Reserve finite inventory in the order-insert transaction and use an authenticated, idempotent cart-merge function to avoid concurrent overselling or partial guest-cart merges.
 - Use guarded browser storage and session-only checkout progress so restricted browsers remain usable and delivery details do not persist across shared-device sessions.
 - Do not inject ref callbacks into arbitrary JSX components through development taggers; ordinary function components cannot accept them and Radix ref effects can loop.
+- Order status changes only move forward, enforced by a database trigger and mirrored in `src/lib/commerce.ts`; keep both in sync so the admin UI never offers a move the database rejects.
+- Customer data erasure goes through the admin-only `admin_erase_customer_data` function, which anonymizes orders instead of deleting them so sales records stay intact.
+- The admin section lives in the `?tab=` URL parameter so refreshes and shared links keep the open section.

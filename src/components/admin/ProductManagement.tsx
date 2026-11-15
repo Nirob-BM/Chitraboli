@@ -233,6 +233,7 @@ export const ProductManagement = () => {
       }
 
       closeModal();
+      window.dispatchEvent(new Event("admin-changes-saved"));
       void fetchProducts();
     } catch (error) {
       if (uploadedPaths.length > 0) {
