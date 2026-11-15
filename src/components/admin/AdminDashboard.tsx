@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Package, ShoppingBag, Banknote, ShieldQuestion, BadgeCheck, BadgeX,
-  Loader2, Truck, Clock, ArrowRight
+  Loader2, Truck, Clock, ArrowRight, AlertTriangle, RefreshCw
 } from "lucide-react";
+import { allowedOrderStatuses, countsTowardRevenue } from "@/lib/commerce";
 
 export interface DashboardOrderItem {
   name?: string;
@@ -30,19 +31,29 @@ export interface DashboardOrder {
   payment_status?: string;
 }
 
+export interface DashboardSummary {
+  id: string;
+  status: string;
+  payment_status: string;
+  payment_method: string | null;
+  total_amount: number;
+  created_at: string;
+}
+
 interface AdminDashboardProps {
+  /** Open orders and payments awaiting verification (newest first). */
   orders: DashboardOrder[];
+  /** Lightweight list of every order, used for the counts. */
+  summary: DashboardSummary[];
   loading: boolean;
-  updatingStatus: string | null;
-  updatingPayment: string | null;
+  error?: string | null;
+  onRetry?: () => void;
+  updatingStatusIds: Set<string>;
+  updatingPaymentIds: Set<string>;
   onUpdateStatus: (orderId: string, status: string) => void;
   onUpdatePaymentStatus: (orderId: string, paymentStatus: string) => void;
   onViewAllOrders: () => void;
 }
-
-const STATUS_OPTIONS = [
-  "pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "returned",
-];
 
 const statusColor = (status: string) => {
   switch (status) {
@@ -67,25 +78,27 @@ const formatDate = (value: string) =>
 
 export const AdminDashboard = ({
   orders,
+  summary,
   loading,
-  updatingStatus,
-  updatingPayment,
+  error,
+  onRetry,
+  updatingStatusIds,
+  updatingPaymentIds,
   onUpdateStatus,
   onUpdatePaymentStatus,
   onViewAllOrders,
 }: AdminDashboardProps) => {
   const stats = useMemo(() => {
     const today = new Date().toDateString();
-    const paid = orders.filter((o) => (o.payment_status || "unpaid") === "verified");
     return {
-      pending: orders.filter((o) => o.status === "pending").length,
-      awaitingPayment: orders.filter((o) => (o.payment_status || "unpaid") === "pending_verification").length,
-      inDelivery: orders.filter((o) => ["confirmed", "processing", "shipped"].includes(o.status)).length,
-      todayOrders: orders.filter((o) => new Date(o.created_at).toDateString() === today).length,
-      revenue: paid.reduce((sum, o) => sum + Number(o.total_amount || 0), 0),
-      total: orders.length,
+      pending: summary.filter((o) => o.status === "pending").length,
+      awaitingPayment: summary.filter((o) => (o.payment_status || "unpaid") === "pending_verification").length,
+      inDelivery: summary.filter((o) => ["confirmed", "processing", "shipped"].includes(o.status)).length,
+      todayOrders: summary.filter((o) => new Date(o.created_at).toDateString() === today).length,
+      revenue: summary.filter(countsTowardRevenue).reduce((sum, o) => sum + Number(o.total_amount || 0), 0),
+      total: summary.length,
     };
-  }, [orders]);
+  }, [summary]);
 
   const paymentQueue = useMemo(
     () => orders.filter((o) => (o.payment_status || "unpaid") === "pending_verification").slice(0, 8),
@@ -93,9 +106,26 @@ export const AdminDashboard = ({
   );
 
   const pendingOrders = useMemo(
-    () => orders.filter((o) => !["delivered", "cancelled", "returned"].includes(o.status)).slice(0, 10),
+    () => orders.filter((o) => ["pending", "confirmed", "processing", "shipped"].includes(o.status)).slice(0, 10),
     [orders]
   );
+
+  if (error && summary.length === 0) {
+    return (
+      <div role="alert" className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+        <AlertTriangle className="w-10 h-10 text-destructive" />
+        <div>
+          <p className="font-display text-xl text-foreground">Dashboard data could not be loaded</p>
+          <p className="text-sm text-muted-foreground">Check your connection and try again.</p>
+        </div>
+        {onRetry && (
+          <Button variant="outline" className="gap-2 rounded-full" onClick={onRetry}>
+            <RefreshCw className="w-4 h-4" /> Try again
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -110,7 +140,7 @@ export const AdminDashboard = ({
     { label: "Payments to verify", value: stats.awaitingPayment, icon: ShieldQuestion },
     { label: "In delivery", value: stats.inDelivery, icon: Truck },
     { label: "Orders today", value: stats.todayOrders, icon: ShoppingBag },
-    { label: "Verified revenue", value: money(stats.revenue), icon: Banknote },
+    { label: "Paid sales", value: money(stats.revenue), icon: Banknote },
     { label: "All orders", value: stats.total, icon: Package },
   ];
 
@@ -166,10 +196,10 @@ export const AdminDashboard = ({
                     size="sm"
                     variant="outline"
                     className="rounded-full"
-                    disabled={updatingPayment === order.id}
+                    disabled={updatingPaymentIds.has(order.id)}
                     onClick={() => onUpdatePaymentStatus(order.id, "verified")}
                   >
-                    {updatingPayment === order.id
+                    {updatingPaymentIds.has(order.id)
                       ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       : <BadgeCheck className="w-3.5 h-3.5 mr-1" />}
                     Verify
@@ -178,7 +208,7 @@ export const AdminDashboard = ({
                     size="sm"
                     variant="ghost"
                     className="rounded-full text-red-400 hover:text-red-300"
-                    disabled={updatingPayment === order.id}
+                    disabled={updatingPaymentIds.has(order.id)}
                     onClick={() => onUpdatePaymentStatus(order.id, "rejected")}
                   >
                     <BadgeX className="w-3.5 h-3.5 mr-1" />
@@ -224,17 +254,17 @@ export const AdminDashboard = ({
                   <p className="text-xs text-muted-foreground/70">{formatDate(order.created_at)}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {updatingStatus === order.id && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                  {updatingStatusIds.has(order.id) && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
                   <Select
                     value={order.status}
                     onValueChange={(value) => onUpdateStatus(order.id, value)}
-                    disabled={updatingStatus === order.id}
+                    disabled={updatingStatusIds.has(order.id)}
                   >
-                    <SelectTrigger className="w-[150px] h-9 text-xs">
+                    <SelectTrigger aria-label={`Status for order ${order.order_number || order.id.slice(0, 8)}`} className="w-[150px] h-9 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {STATUS_OPTIONS.map((status) => (
+                      {allowedOrderStatuses(order.status).map((status) => (
                         <SelectItem key={status} value={status} className="capitalize text-xs">
                           {status}
                         </SelectItem>

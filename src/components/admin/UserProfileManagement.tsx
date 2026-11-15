@@ -105,6 +105,8 @@ export const UserProfileManagement = () => {
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [userDetailLoading, setUserDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [usersError, setUsersError] = useState<string | null>(null);
   
   const [editingUser, setEditingUser] = useState(false);
   const [editForm, setEditForm] = useState<Partial<UserProfile>>({});
@@ -128,9 +130,9 @@ export const UserProfileManagement = () => {
 
       if (error) throw error;
       setUsers(data || []);
+      setUsersError(null);
     } catch (err: any) {
-      toast.error("Failed to load users");
-      console.error(err);
+      setUsersError(err?.message || "Users could not be loaded");
     } finally {
       setLoading(false);
     }
@@ -138,31 +140,35 @@ export const UserProfileManagement = () => {
 
   const fetchUserDetails = async (user: UserProfile) => {
     setUserDetailLoading(true);
+    setDetailError(null);
     setSelectedUser(user);
     setEditForm(user);
     
     try {
       // Fetch linked accounts
-      const { data: accountsData } = await supabase
+      const { data: accountsData, error: accountsError } = await supabase
         .from('linked_accounts')
         .select('*')
         .eq('user_id', user.id);
+      if (accountsError) throw accountsError;
       setLinkedAccounts(accountsData || []);
 
       // Fetch addresses
-      const { data: addressData } = await supabase
+      const { data: addressData, error: addressError } = await supabase
         .from('user_addresses')
         .select('*')
         .eq('user_id', user.id);
+      if (addressError) throw addressError;
       setAddresses(addressData || []);
 
       // Fetch orders
-      const { data: orderData } = await supabase
+      const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select('id, total_amount, status, created_at, items')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10);
+      if (orderError) throw orderError;
       
       const formattedOrders = (orderData || []).map(order => ({
         id: order.id,
@@ -173,8 +179,8 @@ export const UserProfileManagement = () => {
       }));
       setOrders(formattedOrders);
 
-    } catch (err) {
-      console.error("Error fetching user details:", err);
+    } catch (err: any) {
+      setDetailError(err?.message || "Details could not be loaded");
     } finally {
       setUserDetailLoading(false);
     }
@@ -370,6 +376,21 @@ export const UserProfileManagement = () => {
     }
   };
 
+  if (usersError) {
+    return (
+      <div role="alert" className="flex flex-col items-center gap-4 py-16 text-center">
+        <AlertTriangle className="w-10 h-10 text-destructive" />
+        <div>
+          <p className="font-display text-xl text-foreground">Users could not be loaded</p>
+          <p className="text-sm text-muted-foreground">Check your connection and try again.</p>
+        </div>
+        <Button variant="outline" onClick={fetchUsers} className="gap-2">
+          <RefreshCw className="w-4 h-4" /> Try again
+        </Button>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -404,6 +425,8 @@ export const UserProfileManagement = () => {
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
+            type="search"
+            aria-label="Search users"
             placeholder="Search by name, email, or phone..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -602,6 +625,17 @@ export const UserProfileManagement = () => {
             {userDetailLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : detailError ? (
+              <div role="alert" className="flex flex-col items-center gap-4 py-12 text-center">
+                <AlertTriangle className="w-10 h-10 text-destructive" />
+                <div>
+                  <p className="font-medium text-foreground">This user's accounts, addresses and orders could not be loaded.</p>
+                  <p className="text-sm text-muted-foreground">Check your connection and try again.</p>
+                </div>
+                <Button variant="outline" onClick={() => selectedUser && fetchUserDetails(selectedUser)} className="gap-2">
+                  <RefreshCw className="w-4 h-4" /> Try again
+                </Button>
               </div>
             ) : (
               <Tabs defaultValue="profile" className="mt-4">

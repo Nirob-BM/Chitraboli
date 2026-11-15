@@ -1209,6 +1209,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_erase_customer_data: {
+        Args: { _customer_id: string }
+        Returns: Json
+      }
       admin_log_profile_audit: {
         Args: {
           _action: string
@@ -1238,6 +1242,10 @@ export type Database = {
       merge_guest_cart: {
         Args: { _items: Json; _merge_key: string }
         Returns: undefined
+      }
+      order_status_transition_allowed: {
+        Args: { _from: string; _to: string }
+        Returns: boolean
       }
       slugify: { Args: { _text: string }; Returns: string }
       track_order: {

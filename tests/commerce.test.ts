@@ -23,3 +23,20 @@ test("sandbox completion does not count as real payment", () => {
 });
 
 test("tracking accepts readable order numbers and legacy IDs", () => {expect(isValidOrderReference("CHB-261115-09935")).toBe(true);expect(isValidOrderReference("a1b03cc9-f1a3-48b2-beff-68b92623e8f1")).toBe(true);expect(isValidOrderReference("fake")).toBe(false);});
+import { countsTowardRevenue, orderStatusTransitionAllowed } from "../src/lib/commerce";
+describe("admin order rules", () => {
+  test("a delivered order cannot go back to pending", () => {
+    expect(orderStatusTransitionAllowed("delivered", "pending")).toBe(false);
+    expect(orderStatusTransitionAllowed("pending", "confirmed")).toBe(true);
+  });
+  test("cancelled orders stay cancelled", () => {
+    expect(orderStatusTransitionAllowed("cancelled", "processing")).toBe(false);
+  });
+  test("cancelled, returned and unpaid orders are not counted as sales", () => {
+    expect(countsTowardRevenue({ status: "cancelled", payment_status: "verified", payment_method: "bkash" })).toBe(false);
+    expect(countsTowardRevenue({ status: "returned", payment_status: "verified", payment_method: "bkash" })).toBe(false);
+    expect(countsTowardRevenue({ status: "pending", payment_status: "unpaid", payment_method: "cod" })).toBe(false);
+    expect(countsTowardRevenue({ status: "delivered", payment_status: "unpaid", payment_method: "cod" })).toBe(true);
+    expect(countsTowardRevenue({ status: "confirmed", payment_status: "verified", payment_method: "bkash" })).toBe(true);
+  });
+});

@@ -22,6 +22,13 @@
       "when": 1794759906975,
       "tag": "0002_checkout_and_cart_integrity",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794767173633,
+      "tag": "0003_admin_customer_erasure_and_status_rules",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { allowedOrderStatuses } from "@/lib/commerce";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Package, Phone, Mail, MapPin, Calendar, ExternalLink, LogOut, Loader2,
   CreditCard, Smartphone, Banknote, Search, Filter, Trash2, X, Bell, Bike, User as UserIcon,
-  BadgeCheck, BadgeX, Copy, ShieldQuestion
+  BadgeCheck, BadgeX, Copy, ShieldQuestion, Menu, RefreshCw, AlertTriangle
 } from "lucide-react";
 
 import { Layout } from "@/components/Layout";
@@ -83,6 +85,24 @@ interface Order {
   delivery_notes?: string | null;
 }
 
+export interface OrderSummary {
+  id: string;
+  status: string;
+  payment_status: string;
+  payment_method: string | null;
+  total_amount: number;
+  created_at: string;
+  customer_email: string;
+}
+
+const ORDERS_PAGE_SIZE = 25;
+const OPEN_STATUSES = ["pending", "confirmed", "processing", "shipped"];
+const ADMIN_TABS = [
+  "dashboard", "orders", "products", "categories", "collections", "riders", "user-profiles", "customer-list",
+  "messages", "statistics", "site-settings", "page-editor", "menu-editor", "notifications", "activity-logs", "backups", "security",
+];
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const ORDER_STATUSES = [
   { value: 'all', label: 'All Orders', color: 'bg-muted text-muted-foreground' },
   { value: 'pending', label: 'Pending', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' },
@@ -113,18 +133,29 @@ const PAYMENT_STATUSES = [
 
 const Admin = () => {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [summary, setSummary] = useState<OrderSummary[]>([]);
+  const [attentionOrders, setAttentionOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [ordersLimit, setOrdersLimit] = useState(ORDERS_PAGE_SIZE);
+  const [hasMoreOrders, setHasMoreOrders] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [roleCheckFailed, setRoleCheckFailed] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
-  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [updatingStatusIds, setUpdatingStatusIds] = useState<Set<string>>(new Set());
+  const [updatingPaymentIds, setUpdatingPaymentIds] = useState<Set<string>>(new Set());
   const [deletingOrder, setDeletingOrder] = useState<string | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(
-    () => typeof window !== "undefined" && window.innerWidth < 768
-  );
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab") || "dashboard";
+  const activeTab = ADMIN_TABS.includes(tabParam) ? tabParam : "dashboard";
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [pendingTab, setPendingTab] = useState<string | null>(null);
+  const unsavedRef = useRef(false);
   const navigate = useNavigate();
 
   // Notification hook
@@ -135,20 +166,51 @@ const Admin = () => {
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
-  const [updatingPayment, setUpdatingPayment] = useState<string | null>(null);
-
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  const markBusy = (setter: typeof setUpdatingStatusIds, id: string, busy: boolean) =>
+    setter(prev => {
+      const next = new Set(prev);
+      if (busy) next.add(id); else next.delete(id);
+      return next;
+    });
+
+  const checkAdminRole = useCallback(async (userId: string) => {
+    setAuthChecking(true);
+    setRoleCheckFailed(false);
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle();
+      if (error) throw error;
+      setIsAdmin(!!data);
+      if (!data) toast.error("You don't have admin access");
+    } catch {
+      setIsAdmin(false);
+      setRoleCheckFailed(true);
+    } finally {
+      setAuthChecking(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
       if (session?.user) {
-        checkAdminRole(session.user.id);
+        void checkAdminRole(session.user.id);
       } else {
         setIsAdmin(false);
         setAuthChecking(false);
@@ -159,29 +221,82 @@ const Admin = () => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        checkAdminRole(session.user.id);
+        void checkAdminRole(session.user.id);
       } else {
         setAuthChecking(false);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [checkAdminRole]);
+
+  const fetchOrders = useCallback(async () => {
+    const formatOrders = (rows: any[]) =>
+      rows.map(order => ({ ...order, items: (order.items as unknown as OrderItem[]) || [] })) as Order[];
+
+    let listQuery = supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(0, ordersLimit);
+    if (statusFilter !== 'all') listQuery = listQuery.eq('status', statusFilter);
+    if (paymentFilter !== 'all') listQuery = listQuery.eq('payment_method', paymentFilter);
+    if (paymentStatusFilter !== 'all') listQuery = listQuery.eq('payment_status', paymentStatusFilter);
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      const since = dateFilter === 'today'
+        ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        : new Date(now.getTime() - (dateFilter === 'week' ? 7 : 30) * 24 * 60 * 60 * 1000);
+      listQuery = listQuery.gte('created_at', since.toISOString());
+    }
+    const term = debouncedSearch.replace(/[,()%*\\]/g, ' ').trim().replace(/^#/, '');
+    if (term) {
+      const like = `%${term}%`;
+      const parts = [
+        `customer_name.ilike.${like}`, `customer_email.ilike.${like}`, `customer_phone.ilike.${like}`,
+        `order_number.ilike.${like}`, `transaction_id.ilike.${like}`,
+      ];
+      if (UUID_RE.test(term)) parts.push(`id.eq.${term}`);
+      listQuery = listQuery.or(parts.join(','));
+    }
+
+    const [list, summaryRes, attention] = await Promise.all([
+      listQuery,
+      supabase.from('orders').select('id, status, payment_status, payment_method, total_amount, created_at, customer_email')
+        .order('created_at', { ascending: false }),
+      supabase.from('orders').select('*')
+        .or(`status.in.(${OPEN_STATUSES.join(',')}),payment_status.eq.pending_verification`)
+        .order('created_at', { ascending: false }).limit(50),
+    ]);
+
+    const failure = list.error || summaryRes.error || attention.error;
+    if (failure) {
+      setOrdersError(failure.message || "Orders could not be loaded");
+    } else {
+      setOrdersError(null);
+      const rows = list.data || [];
+      setHasMoreOrders(rows.length > ordersLimit);
+      setOrders(formatOrders(rows.slice(0, ordersLimit)));
+      setSummary((summaryRes.data || []) as OrderSummary[]);
+      setAttentionOrders(formatOrders(attention.data || []));
+    }
+    setLoading(false);
+    setLoadingMore(false);
+  }, [ordersLimit, statusFilter, paymentFilter, paymentStatusFilter, dateFilter, debouncedSearch]);
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchOrders();
-      // Realtime broadcasts on `orders` are disabled to avoid leaking customer PII to all subscribers.
-      // Poll on an interval instead — RLS keeps the data admin-only.
-      const interval = setInterval(() => {
-        fetchOrders();
-      }, 20000);
+    if (!isAdmin) return;
+    void fetchOrders();
+    // Realtime broadcasts on `orders` are disabled to avoid leaking customer PII to all subscribers.
+    // Poll on an interval instead — RLS keeps the data admin-only.
+    const interval = setInterval(() => { void fetchOrders(); }, 20000);
+    return () => clearInterval(interval);
+  }, [isAdmin, fetchOrders]);
 
-      return () => {
-        clearInterval(interval);
-      };
-    }
-  }, [isAdmin]);
+  // Reset paging when filters change
+  useEffect(() => {
+    setOrdersLimit(ORDERS_PAGE_SIZE);
+  }, [statusFilter, paymentFilter, paymentStatusFilter, dateFilter, debouncedSearch]);
 
   // Clear notifications when viewing orders tab
   useEffect(() => {
@@ -190,65 +305,64 @@ const Admin = () => {
     }
   }, [activeTab, newOrderCount, clearNotifications]);
 
-  const checkAdminRole = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
-        .single();
-      
-      if (data && !error) {
-        setIsAdmin(true);
-      } else {
-        setIsAdmin(false);
-        toast.error("You don't have admin access");
-      }
-    } catch (error) {
-      setIsAdmin(false);
-    } finally {
-      setAuthChecking(false);
-    }
+  // Warn before leaving the page with unsaved edits
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (unsavedRef.current) { e.preventDefault(); e.returnValue = ""; }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
+
+  const goToTab = (tab: string) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', tab);
+      return next;
+    });
+    unsavedRef.current = false;
+    setMobileMenuOpen(false);
   };
 
-  const fetchOrders = async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      const formattedOrders = data.map(order => ({
-        ...order,
-        items: (order.items as unknown as OrderItem[]) || []
-      }));
-      setOrders(formattedOrders);
+  const requestTab = (tab: string) => {
+    if (tab === activeTab) { setMobileMenuOpen(false); return; }
+    if (unsavedRef.current) {
+      setMobileMenuOpen(false);
+      setPendingTab(tab);
+      return;
     }
-    setLoading(false);
+    goToTab(tab);
+  };
+
+  const trackUnsavedInput = (e: React.FormEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLInputElement;
+    if (target?.type === 'search' || target?.type === 'file' || target?.closest?.('[data-ignore-unsaved]')) return;
+    unsavedRef.current = true;
   };
 
   const updatePaymentStatus = async (orderId: string, newPaymentStatus: string) => {
-    setUpdatingPayment(orderId);
+    markBusy(setUpdatingPaymentIds, orderId, true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('orders')
         .update({
           payment_status: newPaymentStatus,
           payment_verified_at: newPaymentStatus === 'verified' ? new Date().toISOString() : null,
           payment_verified_by: newPaymentStatus === 'verified' ? (user?.id ?? null) : null,
         })
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .select('id');
 
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error("The order was not changed. It may have been deleted, or you may not have permission.");
 
       const label = PAYMENT_STATUSES.find(p => p.value === newPaymentStatus)?.label ?? newPaymentStatus;
       toast.success(`Payment marked as ${label}`);
-      fetchOrders();
+      void fetchOrders();
     } catch (error: any) {
       toast.error(`Failed to update payment: ${error.message}`);
     } finally {
-      setUpdatingPayment(null);
+      markBusy(setUpdatingPaymentIds, orderId, false);
     }
   };
 
@@ -262,18 +376,26 @@ const Admin = () => {
   };
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    const order = orders.find(o => o.id === orderId) || attentionOrders.find(o => o.id === orderId);
+    if (!order) { toast.error("Order not found. Please refresh."); return; }
+    if (order.status === newStatus) return;
+    if (!allowedOrderStatuses(order.status).includes(newStatus)) {
+      toast.error(`An order can't move from ${order.status} to ${newStatus}.`);
+      return;
+    }
 
-    setUpdatingStatus(orderId);
+    markBusy(setUpdatingStatusIds, orderId, true);
     try {
-      const order = orders.find(o => o.id === orderId);
-      if (!order) throw new Error("Order not found");
-
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('orders')
         .update({ status: newStatus })
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .select('id, status');
 
       if (error) throw error;
+      if (!data || data.length === 0 || data[0].status !== newStatus) {
+        throw new Error("The order was not changed. It may have been deleted, or you may not have permission.");
+      }
       
       try {
         const { error: emailError } = await supabase.functions.invoke('send-order-status-email', {
@@ -301,30 +423,32 @@ const Admin = () => {
         } else {
           toast.success(`Status updated to ${newStatus} - Email sent`);
         }
-      } catch (emailErr) {
+      } catch {
         toast.success(`Status updated to ${newStatus} (email notification failed)`);
       }
       
-      fetchOrders();
+      void fetchOrders();
     } catch (error: any) {
       toast.error(`Failed to update status: ${error.message}`);
     } finally {
-      setUpdatingStatus(null);
+      markBusy(setUpdatingStatusIds, orderId, false);
     }
   };
 
   const deleteOrder = async (order: Order) => {
     setDeletingOrder(order.id);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('orders')
         .delete()
-        .eq('id', order.id);
+        .eq('id', order.id)
+        .select('id');
 
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error("Nothing was deleted. You may not have permission.");
       
       toast.success(`Order ${order.order_number || '#' + order.id.slice(0, 8)} deleted successfully`);
-      fetchOrders();
+      void fetchOrders();
     } catch (error: any) {
       toast.error(`Failed to delete order: ${error.message}`);
     } finally {
@@ -398,42 +522,10 @@ const Admin = () => {
     window.open(`https://wa.me/${order.customer_phone.replace(/[^0-9]/g, '')}?text=${encodedMessage}`, '_blank');
   };
 
-  // Filter orders
-  const filteredOrders = orders.filter(order => {
-    const searchLower = searchQuery.toLowerCase();
-    const matchesSearch = searchQuery === "" || 
-      order.customer_name.toLowerCase().includes(searchLower) ||
-      order.customer_email.toLowerCase().includes(searchLower) ||
-      order.customer_phone.includes(searchQuery) ||
-      order.id.toLowerCase().includes(searchLower) ||
-      order.order_number?.toLowerCase().includes(searchLower) ||
-      order.transaction_id?.toLowerCase().includes(searchLower);
+  // Orders are filtered on the server; this is the current page.
+  const filteredOrders = orders;
 
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-    const matchesPayment = paymentFilter === "all" || 
-      (order.payment_method || 'cod') === paymentFilter;
-    const matchesPaymentStatus = paymentStatusFilter === "all" ||
-      (order.payment_status || 'unpaid') === paymentStatusFilter;
-
-    let matchesDate = true;
-    if (dateFilter !== "all") {
-      const orderDate = new Date(order.created_at);
-      const now = new Date();
-      if (dateFilter === "today") {
-        matchesDate = orderDate.toDateString() === now.toDateString();
-      } else if (dateFilter === "week") {
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        matchesDate = orderDate >= weekAgo;
-      } else if (dateFilter === "month") {
-        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        matchesDate = orderDate >= monthAgo;
-      }
-    }
-
-    return matchesSearch && matchesStatus && matchesPayment && matchesPaymentStatus && matchesDate;
-  });
-
-  const pendingVerificationCount = orders.filter(
+  const pendingVerificationCount = summary.filter(
     (o) => (o.payment_status || 'unpaid') === 'pending_verification'
   ).length;
 
@@ -454,13 +546,16 @@ const Admin = () => {
       case "dashboard":
         return (
           <AdminDashboard
-            orders={orders}
+            orders={attentionOrders}
+            summary={summary}
             loading={loading}
-            updatingStatus={updatingStatus}
-            updatingPayment={updatingPayment}
+            error={ordersError}
+            onRetry={() => { setLoading(true); void fetchOrders(); }}
+            updatingStatusIds={updatingStatusIds}
+            updatingPaymentIds={updatingPaymentIds}
             onUpdateStatus={updateOrderStatus}
             onUpdatePaymentStatus={updatePaymentStatus}
-            onViewAllOrders={() => setActiveTab("orders")}
+            onViewAllOrders={() => requestTab("orders")}
           />
         );
       case "orders":
@@ -480,7 +575,7 @@ const Admin = () => {
       case "messages":
         return <ContactMessages />;
       case "statistics":
-        return <OrderStatistics orders={orders} />;
+        return <OrderStatistics orders={summary} />;
       case "site-settings":
         return <SiteSettings />;
       case "page-editor":
@@ -529,7 +624,9 @@ const Admin = () => {
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
-                placeholder="Search orders by name, email, phone, ID, or transaction..."
+                type="search"
+                aria-label="Search orders"
+                placeholder="Search orders by name, email, phone, order number, or transaction..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-12 h-12 text-base bg-background/50 border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20"
@@ -617,7 +714,20 @@ const Admin = () => {
       </Card>
 
       {/* Orders List */}
-      {filteredOrders.length === 0 ? (
+      {ordersError ? (
+        <Card className="border-destructive/40" role="alert">
+          <CardContent className="flex flex-col items-center justify-center py-12 gap-4 text-center">
+            <AlertTriangle className="w-10 h-10 text-destructive" />
+            <div>
+              <h3 className="text-xl font-display text-foreground mb-1">Orders could not be loaded</h3>
+              <p className="text-muted-foreground text-sm">Check your connection and try again. ({ordersError})</p>
+            </div>
+            <Button variant="outline" onClick={() => { setLoading(true); void fetchOrders(); }} className="gap-2 rounded-full">
+              <RefreshCw className="w-4 h-4" /> Try again
+            </Button>
+          </CardContent>
+        </Card>
+      ) : filteredOrders.length === 0 ? (
         <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
           <CardContent className="flex flex-col items-center justify-center py-16 sm:py-24">
             <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6">
@@ -667,17 +777,17 @@ const Admin = () => {
                     <Select
                       value={order.status}
                       onValueChange={(value) => updateOrderStatus(order.id, value)}
-                      disabled={updatingStatus === order.id}
+                      disabled={updatingStatusIds.has(order.id) || allowedOrderStatuses(order.status).length === 1}
                     >
-                      <SelectTrigger className="w-[140px] sm:w-[160px] h-10 rounded-xl bg-background/50">
-                        {updatingStatus === order.id ? (
+                      <SelectTrigger aria-label={`Status for order ${order.order_number || order.id.slice(0, 8)}`} className="w-[140px] sm:w-[160px] h-10 rounded-xl bg-background/50">
+                        {updatingStatusIds.has(order.id) ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <SelectValue placeholder="Update status" />
                         )}
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
-                        {ORDER_STATUSES.filter(s => s.value !== 'all').map((status) => (
+                        {ORDER_STATUSES.filter(s => allowedOrderStatuses(order.status).includes(s.value)).map((status) => (
                           <SelectItem key={status.value} value={status.value} className="rounded-lg">
                             {status.label}
                           </SelectItem>
@@ -780,7 +890,7 @@ const Admin = () => {
                         </p>
                       )}
                       <div className="flex flex-wrap items-center gap-2 pl-[52px] mt-3">
-                        {updatingPayment === order.id ? (
+                        {updatingPaymentIds.has(order.id) ? (
                           <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                         ) : (
                           <>
@@ -940,6 +1050,22 @@ const Admin = () => {
               </CardContent>
             </Card>
           ))}
+          {hasMoreOrders && (
+            <div className="flex justify-center pt-2">
+              <Button
+                variant="outline"
+                className="rounded-full gap-2"
+                disabled={loadingMore}
+                onClick={() => { setLoadingMore(true); setOrdersLimit(l => l + ORDERS_PAGE_SIZE); }}
+              >
+                {loadingMore && <Loader2 className="w-4 h-4 animate-spin" />}
+                Load more orders
+              </Button>
+            </div>
+          )}
+          <p className="text-center text-xs text-muted-foreground">
+            Showing {filteredOrders.length} order{filteredOrders.length === 1 ? '' : 's'}{hasMoreOrders ? ' — more available' : ''}
+          </p>
         </div>
       )}
     </div>
@@ -979,13 +1105,34 @@ const Admin = () => {
     );
   }
 
+  if (roleCheckFailed) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center px-4">
+          <Card className="bg-card border-border max-w-md w-full" role="alert">
+            <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16 text-center">
+              <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
+              <h3 className="text-lg sm:text-xl font-display text-foreground mb-2">Couldn't check your access</h3>
+              <p className="text-muted-foreground text-sm sm:text-base mb-6">
+                Your admin permissions could not be confirmed. Check your connection and try again.
+              </p>
+              <Button onClick={() => user && checkAdminRole(user.id)} className="gap-2">
+                <RefreshCw className="w-4 h-4" /> Try again
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
+
   if (!isAdmin) {
     return (
       <Layout>
         <div className="min-h-screen flex items-center justify-center px-4">
           <Card className="bg-card border-border max-w-md w-full">
             <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16">
-              <Package className="w-12 h-12 sm:w-16 sm:h-16 text-red-400 mb-4" />
+              <Package className="w-12 h-12 sm:w-16 sm:h-16 text-destructive mb-4" />
               <h3 className="text-lg sm:text-xl font-display text-foreground mb-2 text-center">Access Denied</h3>
               <p className="text-muted-foreground text-center text-sm sm:text-base mb-6">
                 You don't have admin privileges to access this page.
@@ -1015,20 +1162,46 @@ const Admin = () => {
     <Layout>
       <div className="min-h-screen flex bg-gradient-to-b from-background to-muted/20">
         {/* Sidebar */}
-        <AdminSidebar 
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          newOrderCount={newOrderCount}
-          collapsed={sidebarCollapsed}
-          onCollapsedChange={setSidebarCollapsed}
-        />
+        <div className="hidden md:flex shrink-0 sticky top-0 h-screen">
+          <AdminSidebar
+            activeTab={activeTab}
+            onTabChange={requestTab}
+            newOrderCount={newOrderCount}
+            collapsed={sidebarCollapsed}
+            onCollapsedChange={setSidebarCollapsed}
+          />
+        </div>
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <SheetContent side="left" className="p-0 w-72 max-w-[85vw]">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Admin menu</SheetTitle>
+              <SheetDescription>Choose an admin section</SheetDescription>
+            </SheetHeader>
+            <AdminSidebar
+              activeTab={activeTab}
+              onTabChange={requestTab}
+              newOrderCount={newOrderCount}
+              collapsed={false}
+              hideCollapseToggle
+            />
+          </SheetContent>
+        </Sheet>
 
         {/* Main Content */}
         <div className="flex-1 min-w-0">
           {/* Header */}
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50 px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-3">
+              <Button
+                variant="outline"
+                size="icon"
+                className="md:hidden shrink-0 h-11 w-11"
+                aria-label="Open admin menu"
+                onClick={() => setMobileMenuOpen(true)}
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+              <div className="min-w-0 flex-1">
                 <h1 className="font-display text-2xl sm:text-3xl text-foreground tracking-tight capitalize">
                   {activeTab.replace(/-/g, ' ')}
                 </h1>
@@ -1045,7 +1218,7 @@ const Admin = () => {
                 )}
                 <div className="hidden sm:flex items-center gap-2 bg-card/80 backdrop-blur-sm border border-border rounded-full px-4 py-2">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-sm font-medium">{orders.length}</span>
+                  <span className="text-sm font-medium">{summary.length}</span>
                   <span className="text-muted-foreground text-sm">orders</span>
                 </div>
                 <Button 
@@ -1065,7 +1238,9 @@ const Admin = () => {
           <div className="p-4 sm:p-6 lg:p-8">
             <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-lg">
               <CardContent className="p-4 sm:p-6">
-                {renderContent()}
+                <div onInput={trackUnsavedInput} onSubmitCapture={() => { unsavedRef.current = false; }}>
+                  {renderContent()}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -1078,7 +1253,8 @@ const Admin = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Order</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete order #{orderToDelete?.id.slice(0, 8)}? 
+              Are you sure you want to delete order {orderToDelete?.order_number || `#${orderToDelete?.id.slice(0, 8)}`}
+              {orderToDelete ? ` for ${orderToDelete.customer_name}` : ''}? 
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1089,6 +1265,27 @@ const Admin = () => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Unsaved changes confirmation */}
+      <AlertDialog open={!!pendingTab} onOpenChange={(open) => !open && setPendingTab(null)}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have typed changes in this section that haven't been saved. Leaving now will lose them.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Stay here</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (pendingTab) goToTab(pendingTab); setPendingTab(null); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Discard and leave
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

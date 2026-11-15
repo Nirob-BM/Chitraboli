@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ import {
 import { 
   Users, Search, Phone, Mail, MapPin, ShoppingBag, Ban, 
   CheckCircle, Loader2, RefreshCw, MessageSquare, Trash2,
-  UserX, UserCheck, StickyNote, Calendar, DollarSign
+  UserX, UserCheck, StickyNote, DollarSign, AlertTriangle
 } from "lucide-react";
 import { useCustomers, Customer, CustomerNote } from "@/hooks/useCustomers";
 import { toast } from "sonner";
@@ -30,9 +30,12 @@ export const CustomerManagement = () => {
   const { 
     customers: allCustomers, 
     loading, 
+    error: loadError,
     blockCustomer,
     unblockCustomer,
     deleteCustomer,
+    addCustomerNote,
+    getCustomerNotes,
     refetch 
   } = useCustomers();
 
@@ -46,11 +49,6 @@ export const CustomerManagement = () => {
            c.phone?.includes(q);
   });
 
-  const addNote = async (email: string, note: string) => {
-    // Note functionality would be implemented here
-    return { success: true };
-  };
-
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [customerToBlock, setCustomerToBlock] = useState<Customer | null>(null);
@@ -58,6 +56,25 @@ export const CustomerManagement = () => {
   const [newNote, setNewNote] = useState("");
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [notes, setNotes] = useState<CustomerNote[]>([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [notesError, setNotesError] = useState<string | null>(null);
+
+  const loadNotes = async (customer: Customer) => {
+    setNotesLoading(true);
+    setNotesError(null);
+    const result = await getCustomerNotes(customer);
+    if (result.success) setNotes(result.data);
+    else setNotesError(result.error || "Notes could not be loaded");
+    setNotesLoading(false);
+  };
+
+  useEffect(() => {
+    setNotes([]);
+    setNewNote("");
+    if (selectedCustomer) void loadNotes(selectedCustomer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCustomer?.id]);
 
   const handleBlock = async () => {
     if (!customerToBlock) return;
@@ -72,7 +89,7 @@ export const CustomerManagement = () => {
         setSelectedCustomer(prev => prev ? { ...prev, is_blocked: true, block_reason: blockReason } : null);
       }
     } else {
-      toast.error("Failed to block customer");
+      toast.error(`Failed to block customer: ${result.error || "unknown error"}`);
     }
     setIsProcessing(false);
   };
@@ -86,7 +103,7 @@ export const CustomerManagement = () => {
         setSelectedCustomer(prev => prev ? { ...prev, is_blocked: false, block_reason: null } : null);
       }
     } else {
-      toast.error("Failed to unblock customer");
+      toast.error(`Failed to unblock customer: ${result.error || "unknown error"}`);
     }
     setIsProcessing(false);
   };
@@ -95,12 +112,13 @@ export const CustomerManagement = () => {
     if (!selectedCustomer || !newNote.trim()) return;
     setIsAddingNote(true);
     
-    const result = await addNote(selectedCustomer.email!, newNote);
-    if (result.success) {
-      toast.success("Note added");
+    const result = await addCustomerNote(selectedCustomer, newNote);
+    if (result.success && result.data) {
+      setNotes(prev => [result.data!, ...prev]);
+      toast.success("Note saved");
       setNewNote("");
     } else {
-      toast.error("Failed to add note");
+      toast.error(`Failed to save note: ${result.error || "unknown error"}`);
     }
     setIsAddingNote(false);
   };
@@ -111,11 +129,16 @@ export const CustomerManagement = () => {
     
     const result = await deleteCustomer(customerToDelete.id);
     if (result.success) {
-      toast.success("Customer data deleted (GDPR request completed)");
+      const r = result.result;
+      toast.success(
+        r
+          ? `Customer data erased: ${r.orders_anonymized} order(s) anonymized, ${r.notes_deleted} note(s) and ${r.messages_deleted} message(s) deleted`
+          : "Customer data erased"
+      );
       setCustomerToDelete(null);
       setSelectedCustomer(null);
     } else {
-      toast.error("Failed to delete customer");
+      toast.error(`Failed to erase customer data: ${result.error || "unknown error"}`);
     }
     setIsProcessing(false);
   };
@@ -147,7 +170,9 @@ export const CustomerManagement = () => {
           <div>
             <h2 className="text-xl font-display font-semibold">Customer Management</h2>
             <p className="text-sm text-muted-foreground">
-              {customers.length} customers total
+              {searchQuery
+                ? `${customers.length} of ${allCustomers.length} customers match`
+                : `${allCustomers.length} customers total`}
             </p>
           </div>
         </div>
@@ -161,6 +186,8 @@ export const CustomerManagement = () => {
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
         <Input
+          type="search"
+          aria-label="Search customers"
           placeholder="Search by name, email, or phone..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -169,7 +196,20 @@ export const CustomerManagement = () => {
       </div>
 
       {/* Customers Grid */}
-      {customers.length === 0 ? (
+      {loadError ? (
+        <Card className="border-destructive/40" role="alert">
+          <CardContent className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+            <AlertTriangle className="w-10 h-10 text-destructive" />
+            <div>
+              <h3 className="text-lg font-display text-foreground mb-1">Customers could not be loaded</h3>
+              <p className="text-sm text-muted-foreground">Check your connection and try again.</p>
+            </div>
+            <Button variant="outline" onClick={refetch} className="gap-2">
+              <RefreshCw className="w-4 h-4" /> Try again
+            </Button>
+          </CardContent>
+        </Card>
+      ) : customers.length === 0 ? (
         <Card className="bg-card/80 backdrop-blur-sm border-border/50">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Users className="w-12 h-12 text-muted-foreground mb-4" />
@@ -184,19 +224,25 @@ export const CustomerManagement = () => {
           {customers.map((customer) => (
             <Card 
               key={customer.id} 
-              className={`bg-card/80 backdrop-blur-sm border-border/50 cursor-pointer hover:border-primary/50 transition-colors ${
-                customer.is_blocked ? 'border-l-4 border-l-red-500' : ''
+              role="button"
+              tabIndex={0}
+              aria-label={`Open details for ${customer.name || customer.email || customer.phone || 'customer'}`}
+              className={`bg-card/80 backdrop-blur-sm border-border/50 cursor-pointer hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors ${
+                customer.is_blocked ? 'border-l-4 border-l-destructive' : ''
               }`}
               onClick={() => setSelectedCustomer(customer)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCustomer(customer); }
+              }}
             >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      customer.is_blocked ? 'bg-red-500/10' : 'bg-primary/10'
+                      customer.is_blocked ? 'bg-destructive/10' : 'bg-primary/10'
                     }`}>
                       {customer.is_blocked ? (
-                        <UserX className="w-5 h-5 text-red-500" />
+                        <UserX className="w-5 h-5 text-destructive" />
                       ) : (
                         <Users className="w-5 h-5 text-primary" />
                       )}
@@ -252,10 +298,10 @@ export const CustomerManagement = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                selectedCustomer?.is_blocked ? 'bg-red-500/10' : 'bg-primary/10'
+                selectedCustomer?.is_blocked ? 'bg-destructive/10' : 'bg-primary/10'
               }`}>
                 {selectedCustomer?.is_blocked ? (
-                  <UserX className="w-5 h-5 text-red-500" />
+                  <UserX className="w-5 h-5 text-destructive" />
                 ) : (
                   <Users className="w-5 h-5 text-primary" />
                 )}
@@ -310,8 +356,8 @@ export const CustomerManagement = () => {
 
               {/* Block Reason */}
               {selectedCustomer?.is_blocked && selectedCustomer.block_reason && (
-                <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-                  <p className="text-sm font-medium text-red-500 mb-1">Block Reason</p>
+                <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <p className="text-sm font-medium text-destructive mb-1">Block Reason</p>
                   <p className="text-sm text-muted-foreground">{selectedCustomer.block_reason}</p>
                 </div>
               )}
@@ -335,8 +381,9 @@ export const CustomerManagement = () => {
                   <Button
                     onClick={handleAddNote}
                     disabled={!newNote.trim() || isAddingNote}
-                    size="sm"
-                    className="self-end"
+                    size="icon"
+                    className="self-end h-10 w-10 shrink-0"
+                    aria-label="Save note"
                   >
                     {isAddingNote ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -346,8 +393,25 @@ export const CustomerManagement = () => {
                   </Button>
                 </div>
 
-              {/* Notes List - placeholder */}
-              {/* Notes would be loaded separately */}
+              {notesLoading ? (
+                <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading notes…</p>
+              ) : notesError ? (
+                <div role="alert" className="flex items-center justify-between gap-3 p-3 rounded-lg border border-destructive/40 text-sm">
+                  <span className="text-destructive">Notes could not be loaded.</span>
+                  <Button size="sm" variant="outline" onClick={() => selectedCustomer && loadNotes(selectedCustomer)}>Try again</Button>
+                </div>
+              ) : notes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No notes yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {notes.map((n) => (
+                    <li key={n.id} className="p-3 rounded-lg bg-muted/30 text-sm">
+                      <p className="whitespace-pre-wrap break-words text-foreground">{n.note}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{formatDate(n.created_at)}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {/* Actions */}
@@ -422,8 +486,9 @@ export const CustomerManagement = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Customer Data</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete all data for {customerToDelete?.name || 'this customer'}.
-              This action is irreversible and is intended for GDPR data deletion requests.
+              This permanently erases {customerToDelete?.name || 'this customer'}'s personal data: the customer record,
+              notes and contact messages are deleted, and their name, email, phone and address are removed from past
+              orders (order totals stay for your accounts). This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -32,6 +32,7 @@ export const useCustomers = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchCustomers = useCallback(async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("customers")
@@ -40,9 +41,9 @@ export const useCustomers = () => {
 
       if (error) throw error;
       setCustomers(data || []);
+      setError(null);
     } catch (err: any) {
-      console.error("Error fetching customers:", err);
-      setError(err.message);
+      setError(err?.message || "Customers could not be loaded");
     } finally {
       setLoading(false);
     }
@@ -113,7 +114,6 @@ export const useCustomers = () => {
       fetchCustomers();
       return { success: true };
     } catch (err: any) {
-      console.error("Error syncing customers:", err);
       return { success: false, error: err.message };
     }
   };
@@ -133,7 +133,6 @@ export const useCustomers = () => {
       
       return { success: true };
     } catch (err: any) {
-      console.error("Error blocking customer:", err);
       return { success: false, error: err.message };
     }
   };
@@ -153,61 +152,66 @@ export const useCustomers = () => {
       
       return { success: true };
     } catch (err: any) {
-      console.error("Error unblocking customer:", err);
       return { success: false, error: err.message };
     }
   };
 
-  const addCustomerNote = async (customerEmail: string, note: string, noteType: string = 'general') => {
+  const addCustomerNote = async (
+    customer: { email: string | null; phone: string | null },
+    note: string,
+    noteType: string = 'general'
+  ): Promise<{ success: boolean; error?: string; data?: CustomerNote }> => {
     try {
+      const key = customer.email || customer.phone;
+      if (!key) throw new Error("This customer has no email or phone to attach the note to");
       const { data: { user } } = await supabase.auth.getUser();
-      
-      const { error } = await supabase
+
+      const { data, error } = await supabase
         .from("customer_notes")
         .insert({
-          customer_email: customerEmail,
-          note,
+          customer_email: key,
+          customer_phone: customer.phone,
+          note: note.trim(),
           note_type: noteType,
           created_by: user?.id || null,
-        });
+        })
+        .select("*")
+        .single();
 
       if (error) throw error;
-      return { success: true };
+      if (!data) throw new Error("The note was not saved");
+      return { success: true, data: data as CustomerNote };
     } catch (err: any) {
-      console.error("Error adding customer note:", err);
       return { success: false, error: err.message };
     }
   };
 
-  const getCustomerNotes = async (customerEmail: string) => {
+  const getCustomerNotes = async (customer: { email: string | null; phone: string | null }) => {
     try {
+      const key = customer.email || customer.phone;
+      if (!key) return { success: true, data: [] as CustomerNote[] };
       const { data, error } = await supabase
         .from("customer_notes")
         .select("*")
-        .eq("customer_email", customerEmail)
+        .eq("customer_email", key)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return { success: true, data: data || [] };
+      return { success: true, data: (data || []) as CustomerNote[] };
     } catch (err: any) {
-      console.error("Error fetching customer notes:", err);
-      return { success: false, error: err.message, data: [] };
+      return { success: false, error: err.message, data: [] as CustomerNote[] };
     }
   };
 
   const deleteCustomer = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from("customers")
-        .delete()
-        .eq("id", id);
-
+      // Removes the customer record, their notes and messages, and anonymizes their past orders.
+      const { data, error } = await supabase.rpc("admin_erase_customer_data", { _customer_id: id });
       if (error) throw error;
-      
+
       setCustomers(prev => prev.filter(c => c.id !== id));
-      return { success: true };
+      return { success: true, result: data as { orders_anonymized: number; notes_deleted: number; messages_deleted: number } };
     } catch (err: any) {
-      console.error("Error deleting customer:", err);
       return { success: false, error: err.message };
     }
   };

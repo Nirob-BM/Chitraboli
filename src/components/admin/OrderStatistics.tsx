@@ -6,6 +6,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell
 } from 'recharts';
 import { TrendingUp, DollarSign, ShoppingCart, Package, Users } from 'lucide-react';
+import { countsTowardRevenue } from '@/lib/commerce';
 
 interface OrderItem {
   name?: string;
@@ -17,13 +18,12 @@ interface OrderItem {
 
 interface Order {
   id: string;
-  customer_name: string;
   customer_email: string;
   total_amount: number;
   status: string;
   created_at: string;
-  payment_method?: string;
-  items: OrderItem[];
+  payment_method?: string | null;
+  payment_status?: string | null;
 }
 
 interface OrderStatisticsProps {
@@ -43,10 +43,13 @@ export const OrderStatistics = ({ orders }: OrderStatisticsProps) => {
     const weekOrders = orders.filter(o => new Date(o.created_at) >= weekAgo);
     const monthOrders = orders.filter(o => new Date(o.created_at) >= monthAgo);
 
-    const todayRevenue = todayOrders.reduce((sum, o) => sum + o.total_amount, 0);
-    const weekRevenue = weekOrders.reduce((sum, o) => sum + o.total_amount, 0);
-    const monthRevenue = monthOrders.reduce((sum, o) => sum + o.total_amount, 0);
-    const totalRevenue = orders.reduce((sum, o) => sum + o.total_amount, 0);
+    // Only paid, non-cancelled/returned orders count as sales.
+    const revenueOf = (list: Order[]) =>
+      list.filter(countsTowardRevenue).reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+    const todayRevenue = revenueOf(todayOrders);
+    const weekRevenue = revenueOf(weekOrders);
+    const monthRevenue = revenueOf(monthOrders);
+    const totalRevenue = revenueOf(orders);
 
     // Daily sales for last 7 days
     const dailySales = [];
@@ -64,7 +67,7 @@ export const OrderStatistics = ({ orders }: OrderStatisticsProps) => {
       dailySales.push({
         day: dateStr,
         orders: dayOrders.length,
-        revenue: dayOrders.reduce((sum, o) => sum + o.total_amount, 0)
+        revenue: revenueOf(dayOrders)
       });
     }
 
