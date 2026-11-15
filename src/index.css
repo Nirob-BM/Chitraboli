@@ -47,6 +47,9 @@
 
     --radius: 0.5rem;
 
+    --payment-bkash: 334 85% 55%;
+    --payment-nagad: 31 89% 55%;
+    --payment-surface: 0 0% 100%;
     /* Custom tokens */
     --gold: 38 65% 55%;
     --gold-light: 45 60% 70%;
@@ -324,4 +327,8 @@
   50% {
     box-shadow: 0 0 40px hsl(38 65% 55% / 0.5);
   }
+}
+
+@media (max-width: 639px) {
+  body { padding-bottom: env(safe-area-inset-bottom); }
 }

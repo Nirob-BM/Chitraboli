@@ -15,6 +15,13 @@
       "when": 1793564988854,
       "tag": "0001_order_numbers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794759906975,
+      "tag": "0002_checkout_and_cart_integrity",
+      "breakpoints": true
     }
   ]
 }

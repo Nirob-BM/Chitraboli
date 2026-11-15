@@ -51,12 +51,10 @@ serve(async (req) => {
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
                      req.headers.get('x-real-ip') || 
                      'unknown';
-    
-    console.log(`Order tracking request from IP: ${clientIp}`);
 
     // Check rate limit
     if (isRateLimited(clientIp)) {
-      console.warn(`Rate limit exceeded for IP: ${clientIp}`);
+
       return new Response(
         JSON.stringify({ 
           error: 'Too many tracking attempts. Please wait a few minutes before trying again.',
@@ -97,7 +95,7 @@ serve(async (req) => {
     }
 
     if (errors.length > 0) {
-      console.warn(`Validation errors for IP ${clientIp}:`, errors);
+
       return new Response(
         JSON.stringify({ error: errors.join(', '), code: 'VALIDATION_ERROR' }),
         { 
@@ -108,8 +106,8 @@ serve(async (req) => {
     }
 
     // Create Supabase client with service role key to bypass RLS
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || "";
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || "";
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -138,7 +136,7 @@ serve(async (req) => {
       .single();
 
     if (error || !data) {
-      console.log(`Order not found for ID: ${orderId.trim().substring(0, 8)}***`);
+
       return new Response(
         JSON.stringify({ 
           success: false,
@@ -169,8 +167,6 @@ serve(async (req) => {
       rider_vehicle_type: riderInfo?.vehicle_type || null
     };
 
-    console.log(`Order found successfully for ID: ${orderId.trim().substring(0, 8)}***`);
-
     return new Response(
       JSON.stringify({ success: true, order: response }),
       { 
@@ -180,7 +176,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+
     return new Response(
       JSON.stringify({ error: 'An unexpected error occurred', code: 'SERVER_ERROR' }),
       { 

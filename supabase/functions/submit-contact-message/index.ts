@@ -46,12 +46,10 @@ serve(async (req) => {
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
                      req.headers.get('x-real-ip') || 
                      'unknown';
-    
-    console.log(`Contact form submission from IP: ${clientIp}`);
 
     // Check rate limit
     if (isRateLimited(clientIp)) {
-      console.warn(`Rate limit exceeded for IP: ${clientIp}`);
+
       return new Response(
         JSON.stringify({ 
           error: 'Too many submissions. Please wait a few minutes before trying again.',
@@ -69,7 +67,7 @@ serve(async (req) => {
 
     // Honeypot check - if filled, it's likely a bot
     if (honeypot) {
-      console.warn(`Honeypot triggered for IP: ${clientIp}`);
+
       // Return success to not alert the bot, but don't actually insert
       return new Response(
         JSON.stringify({ success: true }),
@@ -108,7 +106,7 @@ serve(async (req) => {
     }
 
     if (errors.length > 0) {
-      console.warn(`Validation errors for IP ${clientIp}:`, errors);
+
       return new Response(
         JSON.stringify({ error: errors.join(', '), code: 'VALIDATION_ERROR' }),
         { 
@@ -119,8 +117,8 @@ serve(async (req) => {
     }
 
     // Create Supabase client with service role key to bypass RLS
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || "";
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || "";
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -138,7 +136,7 @@ serve(async (req) => {
       .single();
 
     if (error) {
-      console.error('Database insert error:', error);
+
       return new Response(
         JSON.stringify({ error: 'Failed to submit message. Please try again.', code: 'DB_ERROR' }),
         { 
@@ -147,8 +145,6 @@ serve(async (req) => {
         }
       );
     }
-
-    console.log(`Contact message saved successfully, ID: ${data.id}`);
 
     return new Response(
       JSON.stringify({ success: true, id: data.id }),
@@ -159,7 +155,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+
     return new Response(
       JSON.stringify({ error: 'An unexpected error occurred', code: 'SERVER_ERROR' }),
       { 

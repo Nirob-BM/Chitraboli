@@ -24,7 +24,7 @@ function DeferredLiveChat() {
     if (w.requestIdleCallback) w.requestIdleCallback(() => setReady(true), { timeout: 3000 });
     else { const t = setTimeout(() => setReady(true), 3000); return () => clearTimeout(t); }
   }, []);
-  return ready ? <Suspense fallback={null}><DeferredLiveChat /></Suspense> : null;
+  return ready ? <Suspense fallback={null}><LiveChatWidget /></Suspense> : null;
 }
 
 const whatsappChatUrl = `https://wa.me/8801308697630?text=${encodeURIComponent(
@@ -102,7 +102,7 @@ const Index = () => {
                   alt="Handcrafted Chitraboli necklace with clay sitar motif, orange flowers and matching stud earrings"
                   width={880}
                   height={1179}
-                  fetchPriority="high"
+                  {...{ fetchpriority: "high" }}
                   loading="eager"
                   decoding="sync"
                   className="relative z-10 w-full h-full object-contain drop-shadow-[0_25px_50px_rgba(0,0,0,0.5)] transition-transform duration-700 hover:scale-[1.02]"

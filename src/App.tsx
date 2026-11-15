@@ -105,7 +105,8 @@ const AppContent = () => {
       <SkipToContent />
       <AdSense publisherId={ADSENSE_PUBLISHER_ID} />
       <ScrollToTop />
-      <main id="main-content">
+      <main id="main-content" className="max-sm:pb-11">
+        <ErrorBoundary key={location.pathname}>
         <Suspense fallback={<PageSkeleton />}>
           <div key={location.pathname} className="route-enter">
           <Routes location={location}>
@@ -130,6 +131,7 @@ const AppContent = () => {
           </Routes>
           </div>
         </Suspense>
+        </ErrorBoundary>
       </main>
       <CartDrawer />
       <BackToTop />

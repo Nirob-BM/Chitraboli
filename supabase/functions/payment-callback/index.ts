@@ -25,8 +25,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    Deno.env.get("SUPABASE_URL") || "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
   );
 
   const url = new URL(req.url);
@@ -65,7 +65,7 @@ serve(async (req) => {
         status: gatewayStatus === "cancel" ? "cancelled" : "failed",
         failure_reason: `Gateway reported: ${gatewayStatus}`,
       }).eq("id", tx.id);
-      await supabase.from("orders").update({ payment_status: "unpaid" }).eq("id", tx.order_id);
+      await supabase.from("orders").update({ payment_status: "unpaid" }).eq("id", tx.order_id).neq("payment_status", "verified");
       return redirect(fallbackOrigin, {
         status: gatewayStatus === "cancel" ? "cancelled" : "failed",
         order: tx.order_id,
@@ -80,7 +80,8 @@ serve(async (req) => {
 
     if (tx.provider === "bkash") {
       const cfg = getBkashConfig();
-      const paymentId = url.searchParams.get("paymentID") || tx.gateway_payment_id;
+      const paymentId = tx.gateway_payment_id;
+      if (url.searchParams.get("paymentID") && url.searchParams.get("paymentID") !== paymentId) throw new Error("Payment reference mismatch");
       if (!cfg || !paymentId) throw new Error("bKash configuration or paymentID missing");
 
       const token = await bkashGrantToken(cfg);
@@ -111,7 +112,7 @@ serve(async (req) => {
 
       const expected = Number(tx.amount).toFixed(2);
       if (result?.transactionStatus === "Completed" && result?.trxID) {
-        if (result.amount && Number(result.amount).toFixed(2) !== expected) {
+        if (!result.amount || Number(result.amount).toFixed(2) !== expected) {
           failureReason = `Amount mismatch: gateway ${result.amount} vs order ${expected}`;
         } else {
           succeeded = true;
@@ -122,7 +123,8 @@ serve(async (req) => {
       }
     } else {
       const cfg = getNagadConfig();
-      const reference = url.searchParams.get("payment_ref_id") || tx.gateway_payment_id;
+      const reference = tx.gateway_payment_id;
+      if (url.searchParams.get("payment_ref_id") && url.searchParams.get("payment_ref_id") !== reference) throw new Error("Payment reference mismatch");
       if (!cfg || !reference) throw new Error("Nagad configuration or payment reference missing");
 
       const verifyRes = await fetch(`${cfg.baseUrl}/verify/payment/${reference}`, {
@@ -133,7 +135,7 @@ serve(async (req) => {
 
       const expected = Number(tx.amount).toFixed(2);
       if (result?.status === "Success") {
-        if (result.amount && Number(result.amount).toFixed(2) !== expected) {
+        if (!result.amount || Number(result.amount).toFixed(2) !== expected) {
           failureReason = `Amount mismatch: gateway ${result.amount} vs order ${expected}`;
         } else {
           succeeded = true;
@@ -173,7 +175,7 @@ serve(async (req) => {
       failure_reason: failureReason,
       raw_response: raw as Record<string, unknown>,
     }).eq("id", tx.id);
-    await supabase.from("orders").update({ payment_status: "unpaid" }).eq("id", tx.order_id);
+    await supabase.from("orders").update({ payment_status: "unpaid" }).eq("id", tx.order_id).neq("payment_status", "verified");
 
     return redirect(fallbackOrigin, {
       status: "failed",
@@ -181,7 +183,7 @@ serve(async (req) => {
       provider: tx.provider,
     });
   } catch (error) {
-    console.error("Unexpected error in payment-callback:", error);
+
     if (fallbackOrigin) {
       return redirect(fallbackOrigin, { status: "failed", tx: txId });
     }

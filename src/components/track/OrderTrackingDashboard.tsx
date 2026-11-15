@@ -111,7 +111,7 @@ export function OrderTrackingDashboard({ order, children }: { order: TrackedOrde
             </div>
           </div>
           <div className="sm:text-right">
-            <p className="text-sm font-medium text-foreground">Order #{order.id.slice(0, 8).toUpperCase()}</p>
+            <p className="text-sm font-medium text-foreground">Order #{order.order_number || order.id.slice(0, 8).toUpperCase()}</p>
             <p className="text-xs text-muted-foreground">Placed on {fmtDate(order.created_at)}</p>
           </div>
         </div>

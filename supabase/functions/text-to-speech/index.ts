@@ -46,7 +46,7 @@ serve(async (req) => {
                      'unknown';
     
     if (isRateLimited(clientIp)) {
-      console.log(`Rate limit exceeded for IP: ${clientIp}`);
+
       return new Response(
         JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -57,7 +57,7 @@ serve(async (req) => {
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
     if (!OPENAI_API_KEY) {
-      console.error('Missing required secret: OPENAI_API_KEY');
+
       return new Response(
         JSON.stringify({ error: 'Service temporarily unavailable' }),
         { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -79,8 +79,6 @@ serve(async (req) => {
       voice = 'nova'; // Nova for English
     }
 
-    console.log(`Generating TTS for language: ${language}, voice: ${voice}, text length: ${text.length}`);
-
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: {
@@ -98,7 +96,7 @@ serve(async (req) => {
 
     if (!response.ok) {
       const error = await response.json();
-      console.error('OpenAI TTS error:', error);
+
       throw new Error(error.error?.message || 'Failed to generate speech');
     }
 
@@ -117,8 +115,6 @@ serve(async (req) => {
     
     const base64Audio = btoa(binary);
 
-    console.log('TTS generated successfully, audio size:', audioBuffer.byteLength);
-
     return new Response(
       JSON.stringify({ audioContent: base64Audio }),
       {
@@ -126,7 +122,7 @@ serve(async (req) => {
       },
     );
   } catch (error) {
-    console.error('TTS error:', error);
+
     return new Response(
       JSON.stringify({ error: 'Service temporarily unavailable' }),
       {

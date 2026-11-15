@@ -14,6 +14,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+import { safeStorage } from "@/lib/safeStorage";
+
 interface BackupRecord {
   id: string;
   name: string;
@@ -110,9 +112,10 @@ export const BackupManagement = () => {
   ];
 
   const loadScheduleConfig = () => {
-    const saved = localStorage.getItem('backup_schedule');
+    const saved = safeStorage.get('backup_schedule');
     if (saved) {
-      const config = JSON.parse(saved);
+      let config;
+      try { config = JSON.parse(saved); } catch { safeStorage.remove("backup_schedule"); return; }
       setSchedule({
         ...config,
         lastRun: config.lastRun ? new Date(config.lastRun) : null,
@@ -122,7 +125,7 @@ export const BackupManagement = () => {
   };
 
   const saveScheduleConfig = (newConfig: ScheduleConfig) => {
-    localStorage.setItem('backup_schedule', JSON.stringify(newConfig));
+    safeStorage.set('backup_schedule', JSON.stringify(newConfig));
     setSchedule(newConfig);
   };
 

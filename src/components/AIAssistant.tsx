@@ -1,5 +1,8 @@
 import { Suspense, lazy, useState } from "react";
 import { Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useLocation } from "react-router-dom";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { cn } from "@/lib/utils";
 
 // The chat panel carries the language-model streaming logic, voice input and the
@@ -10,6 +13,7 @@ const AIAssistantPanel = lazy(() =>
 );
 
 export const AIAssistant = () => {
+  const {pathname}=useLocation();
   const [isOpen, setIsOpen] = useState(false);
   // Once loaded, keep the panel mounted so chat history survives close/open.
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -19,18 +23,19 @@ export const AIAssistant = () => {
     setIsOpen((prev) => !prev);
   };
 
+  if (pathname === "/localhost-69") return null;
   return (
-    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
+    <div className="fixed bottom-4 right-4 max-sm:static max-sm:flex max-sm:justify-end max-sm:bg-background sm:bottom-6 sm:right-6 z-50">
       {/* Toggle Button - floating on the right side of every device */}
-      <button
+      <Button type="button"
         onClick={toggle}
         className={cn(
           "relative flex items-center justify-center gap-2 rounded-full",
-          "h-11 w-11 sm:h-auto sm:w-auto sm:px-4 sm:py-2",
+          "h-11 w-11 max-sm:rounded-none sm:h-auto sm:w-auto sm:px-4 sm:py-2",
           "bg-gradient-to-br from-purple-accent to-purple-accent/80",
-          "shadow-[0_0_20px_rgba(139,92,246,0.4)]",
+          "shadow-glow",
           "transition-all duration-300 hover:scale-105 active:scale-95",
-          "text-white text-sm font-medium"
+          "text-secondary-foreground text-sm font-medium"
         )}
         aria-label="Toggle AI Assistant"
         aria-expanded={isOpen}
@@ -40,13 +45,13 @@ export const AIAssistant = () => {
         {!isOpen && (
           <span className="absolute top-0 right-0 sm:static w-2 h-2 bg-gold rounded-full animate-pulse" />
         )}
-      </button>
+      </Button>
 
 
       {hasLoaded && (
-        <Suspense fallback={null}>
+        <ErrorBoundary><Suspense fallback={<p role="status" className="bg-card text-foreground p-3">Opening assistant…</p>}>
           <AIAssistantPanel isOpen={isOpen} onClose={() => setIsOpen(false)} />
-        </Suspense>
+        </Suspense></ErrorBoundary>
       )}
     </div>
   );

@@ -192,13 +192,13 @@ const Auth = () => {
         <Card className="w-full max-w-md bg-card border-border">
           <CardHeader className="text-center">
             {mode === "forgot" && (
-              <button
+              <Button variant="ghost"
                 type="button"
                 onClick={() => setMode("login")}
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary self-start mb-2"
               >
                 <ArrowLeft className="h-3 w-3" /> Back
-              </button>
+              </Button>
             )}
             <h1 className="font-display text-2xl font-semibold">{title}</h1>
             <CardDescription>{subtitle}</CardDescription>
@@ -277,13 +277,13 @@ const Auth = () => {
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">Password</Label>
                     {mode === "login" && (
-                      <button
+                      <Button variant="ghost"
                         type="button"
                         onClick={() => setMode("forgot")}
-                        className="text-xs text-muted-foreground hover:text-primary"
+                        className="min-h-11 text-xs text-muted-foreground hover:text-primary"
                       >
                         Forgot?
-                      </button>
+                      </Button>
                     )}
                   </div>
                   <div className="relative">
@@ -299,14 +299,15 @@ const Auth = () => {
                       required
                       minLength={mode === "signup" ? 8 : 6}
                     />
-                    <button
+                    <Button variant="ghost"
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      size="icon"
+                      className="h-11 w-11 absolute right-0 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
+                    </Button>
                   </div>
                   {mode === "signup" && (
                     <p className="text-[11px] text-muted-foreground">
@@ -334,7 +335,7 @@ const Auth = () => {
 
             {mode !== "forgot" && (
               <div className="mt-6 text-center">
-                <button
+                <Button variant="ghost"
                   type="button"
                   onClick={() => setMode(mode === "login" ? "signup" : "login")}
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
@@ -342,7 +343,7 @@ const Auth = () => {
                   {mode === "login"
                     ? "Don't have an account? Sign up"
                     : "Already have an account? Sign in"}
-                </button>
+                </Button>
               </div>
             )}
           </CardContent>

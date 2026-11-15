@@ -59,7 +59,7 @@ const handler = async (req: Request): Promise<Response> => {
                      "unknown";
     
     if (isRateLimited(clientIP)) {
-      console.warn(`Rate limit exceeded for IP: ${clientIP}`);
+
       return new Response(
         JSON.stringify({ error: "Too many requests. Please try again later." }),
         { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -69,7 +69,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Authentication check
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      console.error("Missing authorization header");
+
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -77,8 +77,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Create Supabase client with user's auth token
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
     
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
@@ -87,7 +87,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Verify user is authenticated
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
-      console.error("Invalid auth token:", authError?.message);
+
       return new Response(
         JSON.stringify({ error: "Invalid authentication token" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -103,7 +103,7 @@ const handler = async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     if (roleError || !roleData) {
-      console.error("User lacks admin privileges:", user.id);
+
       return new Response(
         JSON.stringify({ error: "Admin access required" }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -115,7 +115,7 @@ const handler = async (req: Request): Promise<Response> => {
     const twilioPhoneNumber = Deno.env.get("TWILIO_PHONE_NUMBER");
 
     if (!accountSid || !authToken || !twilioPhoneNumber) {
-      console.error("Missing Twilio credentials");
+
       return new Response(
         JSON.stringify({ error: "SMS service not configured" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -139,7 +139,7 @@ const handler = async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     if (orderError || !orderData) {
-      console.error("Order not found:", orderId);
+
       return new Response(
         JSON.stringify({ error: "Order not found" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -157,8 +157,6 @@ const handler = async (req: Request): Promise<Response> => {
     formattedPhone = '+' + formattedPhone;
 
     const message = `প্রিয় ${customerName}, আপনার অর্ডার #${orderId.slice(-8).toUpperCase()} সফলভাবে নিশ্চিত হয়েছে। মোট: ৳${totalAmount.toLocaleString()}। পেমেন্ট: ${paymentMethod}। ধন্যবাদ! - Jewelry Store`;
-
-    console.log(`Admin ${user.id} sending SMS to ${formattedPhone} for order ${orderId}`);
 
     // Twilio API call
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
@@ -181,7 +179,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!response.ok) {
       // Any provider rejection (e.g. 21659 sender/country mismatch) must not break checkout
-      console.warn("SMS skipped due to provider error:", result?.code, result?.message);
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -192,14 +190,12 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("SMS sent successfully:", result.sid);
-
     return new Response(
       JSON.stringify({ success: true, messageId: result.sid }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {
-    console.error("Error in send-order-sms function:", error);
+
     return new Response(
       JSON.stringify({ error: "An error occurred processing your request" }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }

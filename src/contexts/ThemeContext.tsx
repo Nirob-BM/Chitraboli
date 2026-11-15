@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
+import { safeStorage } from "@/lib/safeStorage";
+
 type Theme = "dark" | "light";
 
 interface ThemeContextType {
@@ -12,14 +14,14 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("chitraboli-theme") as Theme;
-      return saved || "dark";
+      const saved = safeStorage.get("chitraboli-theme") as Theme;
+      return saved === "light" ? "light" : "dark";
     }
     return "dark";
   });
 
   useEffect(() => {
-    localStorage.setItem("chitraboli-theme", theme);
+    safeStorage.set("chitraboli-theme", theme);
     document.documentElement.classList.remove("light", "dark");
     document.documentElement.classList.add(theme);
   }, [theme]);

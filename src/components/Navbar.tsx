@@ -91,7 +91,7 @@ export function Navbar() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden lg:flex items-center gap-8">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
@@ -109,15 +109,15 @@ export function Navbar() {
           </div>
 
           {/* Theme Toggle, User Menu, Cart & Mobile Menu */}
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-2 lg:gap-4">
             <ThemeToggle />
             
             {/* Desktop User Account Menu */}
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
               {user ? (
                 <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost-gold" size="icon" className="relative">
+                  <Button variant="ghost-gold" size="icon" className="relative" aria-label="Open account menu">
                     <User className="h-5 w-5" />
                     {isAdmin && (
                       <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-gold flex items-center justify-center">
@@ -179,7 +179,7 @@ export function Navbar() {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className="lg:hidden"
               onClick={() => setIsOpen(!isOpen)}
               aria-label="Toggle menu"
             >
@@ -190,7 +190,7 @@ export function Navbar() {
 
         {/* Mobile Menu */}
         {isOpen && (
-          <div className="md:hidden py-4 border-t border-border/50 animate-fade-up">
+          <div className="lg:hidden py-4 border-t border-border/50 animate-fade-up">
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
                 <Link

@@ -20,10 +20,12 @@ interface ProductCardProps {
 export const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
   ({ id, slug, name, price, image, category, sizes, colors, stockQuantity }, ref) => {
     const { addItem } = useCart();
+    const soldOut = stockQuantity === 0;
 
     const handleAddToCart = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      if (soldOut) return;
       addItem({
         product_id: String(id),
         product_name: name,
@@ -57,9 +59,9 @@ export const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
 
             {/* Quick Add Button */}
             <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-500">
-              <Button variant="gold" className="w-full" onClick={handleAddToCart}>
+              <Button disabled={soldOut} variant="gold" className="w-full" onClick={handleAddToCart}>
                 <ShoppingCart className="h-4 w-4 mr-2" />
-                Add to Cart
+                {soldOut ? "Out of Stock" : "Add to Cart"}
               </Button>
             </div>
           </div>
@@ -80,6 +82,7 @@ export const ProductCard = React.forwardRef<HTMLDivElement, ProductCardProps>(
                 {[colors?.length ? `${colors.length} color${colors.length > 1 ? "s" : ""}` : null, sizes?.length ? `Sizes: ${sizes.join(", ")}` : null].filter(Boolean).join(" · ")}
               </p>
             ) : null}
+            {soldOut && <p className="mt-1 text-xs text-destructive">Out of Stock</p>}
             {typeof stockQuantity === "number" && stockQuantity > 0 && stockQuantity <= 5 && (
               <p className="mt-1 text-[10px] sm:text-xs text-destructive font-medium">Only {stockQuantity} left</p>
             )}

@@ -18,6 +18,9 @@ export default {
         body: ['Outfit', 'sans-serif'],
       },
       colors: {
+        "payment-bkash": "hsl(var(--payment-bkash))",
+        "payment-nagad": "hsl(var(--payment-nagad))",
+        "payment-surface": "hsl(var(--payment-surface))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

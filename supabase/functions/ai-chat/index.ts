@@ -47,7 +47,7 @@ serve(async (req) => {
                      'unknown';
     
     if (isRateLimited(clientIp)) {
-      console.log(`Rate limit exceeded for IP: ${clientIp}`);
+
       return new Response(
         JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
         { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -60,14 +60,12 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
     if (!LOVABLE_API_KEY) {
-      console.error("Missing required secret: LOVABLE_API_KEY");
+
       return new Response(
         JSON.stringify({ error: "Service temporarily unavailable" }),
         { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    console.log("Processing chat request with messages:", messages.length, "language:", language);
 
     // Fetch products from database for auto-sync
     let productCatalog = "";
@@ -103,11 +101,11 @@ serve(async (req) => {
             }
             productCatalog += "\n";
           }
-          console.log("Loaded", products.length, "products from database");
+
         }
       }
     } catch (dbError) {
-      console.error("Error fetching products:", dbError);
+
       // Continue with hardcoded fallback
     }
 
@@ -202,8 +200,7 @@ Your responses may be read aloud by TTS engines. Follow these rules:
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      
+
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded, please try again later." }), {
           status: 429,
@@ -227,7 +224,7 @@ Your responses may be read aloud by TTS engines. Follow these rules:
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (error) {
-    console.error("Chat error:", error);
+
     return new Response(JSON.stringify({ error: "Service temporarily unavailable" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

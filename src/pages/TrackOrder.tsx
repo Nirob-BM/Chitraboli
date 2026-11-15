@@ -1,3 +1,4 @@
+import { isValidOrderReference } from "@/lib/commerce";
 import { useState, useEffect, lazy, Suspense, useCallback } from "react";
 import { SEO } from "@/components/SEO";
 import { Link, useSearchParams } from "react-router-dom";
@@ -44,6 +45,7 @@ interface Order {
 
 interface RecentOrder {
   id: string;
+  order_number?: string | null;
   status: string;
   total_amount: number;
   created_at: string;
@@ -121,6 +123,7 @@ const TrackOrder = () => {
         if (exists) return prev;
         const newOrder: RecentOrder = {
           id: order.id,
+          order_number: order.order_number,
           status: order.status,
           total_amount: order.total_amount,
           created_at: order.created_at
@@ -145,10 +148,10 @@ const TrackOrder = () => {
     const cleanOrderId = orderId.trim().replace(/^#/, "").trim();
     const cleanPhone = phoneNumber.trim();
 
-    if (cleanOrderId.length < 10 || !/^[a-f0-9-]+$/i.test(cleanOrderId)) {
+    if (!isValidOrderReference(cleanOrderId)) {
       toast({
         title: "Invalid order ID",
-        description: "Please enter the full order ID from your confirmation message (letters a-f, numbers and dashes, at least 10 characters).",
+        description: "Please enter the full CHB order number or original order ID from your confirmation.",
         variant: "destructive"
       });
       return;
@@ -339,14 +342,14 @@ const TrackOrder = () => {
                       const statusInfo = ORDER_STATUSES.find(s => s.value === recentOrder.status) || ORDER_STATUSES[0];
                       return (
                         <button
-                          key={recentOrder.id}
+                          key={recentOrder.order_number || recentOrder.id}
                           type="button"
-                          onClick={() => setOrderId(recentOrder.id)}
+                          onClick={() => setOrderId(recentOrder.order_number || recentOrder.id)}
                           className="w-full flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors text-left"
                         >
                           <div>
                             <p className="text-xs font-mono text-muted-foreground truncate max-w-[180px]">
-                              {recentOrder.id}
+                              {recentOrder.order_number || recentOrder.id}
                             </p>
                             <p className="text-sm font-medium">
                               ৳{recentOrder.total_amount.toLocaleString()}

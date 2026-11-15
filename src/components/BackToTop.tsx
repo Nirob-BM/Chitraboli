@@ -16,7 +16,7 @@ export const BackToTop = () => {
   }, []);
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   };
 
   return (
@@ -27,7 +27,7 @@ export const BackToTop = () => {
       className={cn(
         // Sits directly above the AI Assistant launcher so the two never overlap
         "fixed bottom-[4.5rem] right-4 sm:bottom-[5.5rem] sm:right-6 z-40 rounded-full shadow-lg transition-all duration-300",
-        "h-10 w-10 sm:h-11 sm:w-11",
+        "h-11 w-11",
         isVisible 
           ? "opacity-100 translate-y-0" 
           : "opacity-0 translate-y-4 pointer-events-none"

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,9 @@ import { z } from "zod";
 import bkashLogo from "@/assets/bkash-logo.png";
 import nagadLogo from "@/assets/nagad-logo.svg";
 
+import { safeStorage } from "@/lib/safeStorage";
+import { isValidPhone } from "@/lib/commerce";
+
 const CHECKOUT_STORAGE_KEY = "chitraboli-checkout-progress";
 
 // Order item validation schema (for reference - actual validation done server-side)
@@ -26,7 +29,7 @@ const OrderItemSchema = z.object({
 const CustomerDetailsSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
   email: z.string().email("Please enter a valid email address"),
-  phone: z.string().min(10, "Phone number must be at least 10 digits").max(15, "Phone number is too long"),
+  phone: z.string().refine(isValidPhone, "Enter a valid phone number with 10–15 digits"),
   address: z.string().min(10, "Please enter a complete address").max(500, "Address is too long"),
 });
 
@@ -76,6 +79,27 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
   const [paymentFlow, setPaymentFlow] = useState<PaymentFlow>("gateway");
   const [gatewayAvailable, setGatewayAvailable] = useState<boolean | null>(null);
   const [checkingGateway, setCheckingGateway] = useState(false);
+  const [gatewayError, setGatewayError] = useState(false);
+  const [gatewayRetry, setGatewayRetry] = useState(0);
+  const [quoteTotal, setQuoteTotal] = useState<number | null>(null);
+  const [quoteError, setQuoteError] = useState("");
+  const [quoting, setQuoting] = useState(false);
+  const checkoutKey = useRef(crypto.randomUUID());
+  const checkoutToken = useRef(crypto.randomUUID() + crypto.randomUUID());
+  const submitLock = useRef(false);
+  const pendingOrder = useRef<{ id: string; number: string } | null>(null);
+  const payableTotal = quoteTotal ?? totalPrice;
+  useEffect(() => {
+    if (!open || orderPlaced || !items.length) return;
+    let cancelled = false;
+    setQuoting(true); setQuoteError(""); setQuoteTotal(null);
+    supabase.functions.invoke("create-order", {body:{quote:true,items:items.map(i=>({product_id:i.product_id,quantity:i.quantity}))}}).then(({data,error})=>{
+      if(cancelled)return;
+      if(error || !data?.success) {setQuoteError(data?.error || "Could not check current prices and stock. Please reopen checkout to try again.");return;}
+      setQuoteTotal(Number(data.total_amount));
+    }).catch(()=>{if(!cancelled)setQuoteError("Could not check current prices and stock.");}).finally(()=>{if(!cancelled)setQuoting(false);});
+    return ()=>{cancelled=true;};
+  },[open,items,orderPlaced]);
 
   const isMobileBanking = paymentMethod === "bkash" || paymentMethod === "nagad";
 
@@ -85,19 +109,20 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
     if (!open || !isMobileBanking) return;
     let cancelled = false;
     setCheckingGateway(true);
+    setGatewayError(false);
     setGatewayAvailable(null);
     supabase.functions
       .invoke("payment-initiate", { body: { check: true, provider: paymentMethod } })
       .then(({ data, error }) => {
         if (cancelled) return;
-        const available = !error && data?.configured === true;
+        if (error || typeof data?.configured !== "boolean") {setGatewayError(true);return;}
+        const available = data.configured === true;
         setGatewayAvailable(available);
         setPaymentFlow(available ? "gateway" : "manual");
       })
       .catch(() => {
         if (cancelled) return;
-        setGatewayAvailable(false);
-        setPaymentFlow("manual");
+        setGatewayError(true);
       })
       .finally(() => {
         if (!cancelled) setCheckingGateway(false);
@@ -105,35 +130,37 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
     return () => {
       cancelled = true;
     };
-  }, [open, isMobileBanking, paymentMethod]);
+  }, [open, isMobileBanking, paymentMethod, gatewayRetry]);
 
   const PAYMENT_NUMBER = "01308697630";
 
-  // Load saved progress on mount
+  useEffect(() => { safeStorage.remove(CHECKOUT_STORAGE_KEY); }, []);
+
+  // Tab-only progress expires after 30 minutes.
   useEffect(() => {
     if (open && !hasRestoredProgress) {
       try {
-        const saved = localStorage.getItem(CHECKOUT_STORAGE_KEY);
+        const saved = safeStorage.get(CHECKOUT_STORAGE_KEY, true);
         if (saved) {
           const progress: CheckoutProgress = JSON.parse(saved);
           const isExpired = Date.now() - progress.savedAt > PROGRESS_EXPIRY_MS;
-          
+
           if (!isExpired) {
             setFormData(progress.formData);
             setPaymentMethod(progress.paymentMethod);
             setTransactionId(progress.transactionId);
-            setCurrentStep(progress.currentStep as Step);
+            setCurrentStep(0);
             toast({
               title: "Progress restored",
               description: "Your checkout progress has been restored.",
             });
           } else {
-            localStorage.removeItem(CHECKOUT_STORAGE_KEY);
+            safeStorage.remove(CHECKOUT_STORAGE_KEY, true);
           }
         }
       } catch (e) {
-        console.error("Failed to restore checkout progress:", e);
-        localStorage.removeItem(CHECKOUT_STORAGE_KEY);
+
+        safeStorage.remove(CHECKOUT_STORAGE_KEY, true);
       }
       setHasRestoredProgress(true);
     }
@@ -149,9 +176,9 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
       savedAt: Date.now(),
     };
     try {
-      localStorage.setItem(CHECKOUT_STORAGE_KEY, JSON.stringify(progress));
+      safeStorage.set(CHECKOUT_STORAGE_KEY, JSON.stringify(progress), true);
     } catch (e) {
-      console.error("Failed to save checkout progress:", e);
+
     }
   }, [formData, paymentMethod, transactionId, currentStep]);
 
@@ -162,7 +189,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
   }, [open, formData, paymentMethod, transactionId, currentStep, hasRestoredProgress, orderPlaced, saveProgress]);
 
   const clearProgress = useCallback(() => {
-    localStorage.removeItem(CHECKOUT_STORAGE_KEY);
+    safeStorage.remove(CHECKOUT_STORAGE_KEY, true);
   }, []);
 
   // Validate current step
@@ -183,6 +210,8 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
       return true;
     }
     if (step === 1) {
+      if (isMobileBanking && (checkingGateway || gatewayError || gatewayAvailable === null)) return false;
+      if (quoting || quoteTotal === null || quoteError) return false;
       if (isMobileBanking && paymentFlow === "manual" && !transactionId.trim()) {
         setFieldErrors({ transactionId: "Transaction ID is required for mobile banking" });
         return false;
@@ -205,23 +234,27 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(1)) return;
-    
+    if (submitLock.current || !validateStep(0) || !validateStep(1) || !items.length) return;
+    submitLock.current = true;
+
     setIsSubmitting(true);
 
     try {
-      const sessionId = localStorage.getItem("chitraboli-session") || "";
-      
+      const sessionId = safeStorage.get("chitraboli-session") || "";
+
       // Send only product IDs and quantities - prices will be validated server-side
       const orderItems = items.map(item => ({
         product_id: item.product_id,
         quantity: item.quantity,
       }));
-      
+
       // Use edge function for secure order creation with server-side price validation
       const { data: response, error } = await supabase.functions.invoke("create-order", {
         body: {
           items: orderItems,
+          checkout_key: checkoutKey.current,
+          checkout_token: checkoutToken.current,
+          expected_total: payableTotal,
           customer_details: {
             name: formData.name,
             email: formData.email,
@@ -237,18 +270,24 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
       });
 
       if (error) {
-        console.error("Edge function error:", error);
+        let detail: {error?:string;total_amount?:number} = {};
+        if ("context" in error && error.context instanceof Response) {try {detail=await error.context.json();} catch { /* generic fallback */ }}
+        if(typeof detail.total_amount === "number") {setQuoteTotal(detail.total_amount);setCurrentStep(1);}
+        if(detail.error) throw new Error(detail.error);
         throw new Error(error.message || "Failed to create order");
       }
 
       if (!response?.success || !response?.order) {
+        if (typeof response?.total_amount === "number") {setQuoteTotal(response.total_amount);setCurrentStep(1); }
         const errorMessage = response?.error || "Failed to create order";
-        console.error("Order creation failed:", errorMessage);
+
         throw new Error(errorMessage);
       }
 
       const orderData = response.order;
       const displayOrderId: string = orderData.order_number || orderData.id;
+      pendingOrder.current = {id:orderData.id,number:displayOrderId};
+      safeStorage.set("chitraboli-payment-order",JSON.stringify({id:orderData.id,number:displayOrderId,token:checkoutToken.current,provider:paymentMethod}),true);
 
       // Automatic wallet payment: hand the customer over to the bKash/Nagad
       // checkout. The gateway redirects back to /payment/return once done.
@@ -259,24 +298,13 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
             body: {
               order_id: orderData.id,
               provider: paymentMethod,
+              checkout_token: checkoutToken.current,
               return_origin: window.location.origin,
             },
           }
         );
 
         if (paymentError || !payment?.redirect_url) {
-          if (payment?.configured === false) {
-            setGatewayAvailable(false);
-            setPaymentFlow("manual");
-            setCurrentStep(1);
-            toast({
-              title: "Automatic payment unavailable",
-              description:
-                "Please send the money from your app and enter the transaction ID instead.",
-              variant: "destructive",
-            });
-            return;
-          }
           throw new Error(payment?.error || "Could not open the payment page. Please try again.");
         }
 
@@ -309,43 +337,24 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
       const encodedMessage = encodeURIComponent(message);
       setWhatsappUrl(`https://wa.me/8801308697630?text=${encodedMessage}`);
 
-      // SMS notification - fails silently if Twilio isn't configured for Bangladesh
-      try {
-        const paymentMethodLabel = paymentMethod === "cod" ? "Cash on Delivery" : paymentMethod === "bkash" ? "bKash" : "Nagad";
-        const smsResponse = await supabase.functions.invoke("send-order-sms", {
-          body: {
-            to: formData.phone,
-            orderId: displayOrderId,
-            customerName: formData.name,
-            totalAmount: serverTotalAmount,
-            paymentMethod: paymentMethodLabel,
-          },
-        });
-        if (smsResponse.error) {
-          console.warn("SMS notification skipped:", smsResponse.error);
-        }
-      } catch (smsError) {
-        // SMS is optional - order still succeeded
-        console.warn("SMS notification unavailable:", smsError);
-      }
-
       setPlacedOrder({ number: displayOrderId, total: Number(orderData.total_amount) || 0, phone: formData.phone });
       setOrderPlaced(true);
-      clearCart();
+      await clearCart();
       clearProgress();
-      
+
       toast({
         title: "অর্ডার সফল হয়েছে! ✨",
         description: "আমরা শীঘ্রই আপনার সাথে যোগাযোগ করব।",
       });
     } catch (error) {
-      console.error("Order error:", error);
+
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to place order. Please try again.",
         variant: "destructive",
       });
     } finally {
+      submitLock.current = false;
       setIsSubmitting(false);
     }
   };
@@ -362,10 +371,13 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
     setFieldErrors({});
     setHasRestoredProgress(false);
     clearProgress();
+    checkoutKey.current = crypto.randomUUID();
+    checkoutToken.current = crypto.randomUUID() + crypto.randomUUID();
+    pendingOrder.current = null;
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
+  const copyToClipboard = async (text: string) => {
+    try { await navigator.clipboard.writeText(text); } catch { toast({title:"Could not copy",description:"Please select and copy the number.",variant:"destructive"}); return; }
     toast({
       title: "Copied!",
       description: "Number copied to clipboard",
@@ -440,7 +452,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors"
+                className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg transition-colors"
               >
                 <MessageCircle className="w-5 h-5" />
                 Send Order via WhatsApp
@@ -456,11 +468,11 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-gold/20 max-w-lg max-h-[90vh] overflow-y-auto p-0">
+    <Dialog open={open} onOpenChange={(next) => { if (!next && !isSubmitting) handleClose(); }}>
+      <DialogContent className="bg-card border-gold/20 max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-0">
         <DialogHeader className="p-4 pb-0 sm:p-6 sm:pb-0">
           <DialogTitle className="font-display text-xl sm:text-2xl text-foreground">Checkout</DialogTitle>
-          <DialogDescription className="text-sm">Complete your order in 3 easy steps</DialogDescription>
+          <DialogDescription className="text-sm">Delivery details, payment and order confirmation</DialogDescription>
         </DialogHeader>
 
         {/* Stepper */}
@@ -470,14 +482,14 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
               const StepIcon = step.icon;
               const isActive = index === currentStep;
               const isCompleted = index < currentStep;
-              
+
               return (
                 <div key={step.label} className="flex items-center flex-1">
                   <div className="flex flex-col items-center">
                     <div
                       className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
                         isCompleted
-                          ? "bg-green-500 text-white"
+                          ? "bg-primary text-primary-foreground"
                           : isActive
                           ? "bg-gold text-background"
                           : "bg-muted text-muted-foreground"
@@ -491,7 +503,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
                     </div>
                     <span
                       className={`text-xs sm:text-sm mt-1.5 font-medium transition-colors ${
-                        isActive ? "text-gold" : isCompleted ? "text-green-500" : "text-muted-foreground"
+                        isActive ? "text-gold" : isCompleted ? "text-primary" : "text-muted-foreground"
                       }`}
                     >
                       {step.label}
@@ -500,7 +512,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
                   {index < STEPS.length - 1 && (
                     <div
                       className={`flex-1 h-0.5 mx-2 sm:mx-3 transition-colors ${
-                        index < currentStep ? "bg-green-500" : "bg-muted"
+                        index < currentStep ? "bg-primary" : "bg-muted"
                       }`}
                     />
                   )}
@@ -511,12 +523,19 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
         </div>
 
         <div className="px-4 pb-4 sm:px-6 sm:pb-6">
+          {quoting && <p role="status" className="text-sm text-muted-foreground mb-4">Checking prices and stock…</p>}
+          {quoteError && <p role="alert" className="text-sm text-destructive mb-4">{quoteError}</p>}
+          <p className="text-sm text-muted-foreground mb-4">Delivery charge: not included in the product total; confirmed before dispatch.</p>
+          {pendingOrder.current && <p className="text-sm text-muted-foreground mb-4">Order {pendingOrder.current.number} is saved. Retry payment for this same order.</p>}
           {/* Step 1: Customer Details */}
           {currentStep === 0 && (
             <div className="space-y-4 animate-fade-in">
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Full Name *</label>
+                <Label htmlFor="checkout-name" className="text-sm font-medium text-foreground">Full Name *</Label>
                 <Input
+                  id="checkout-name"
+                  autoComplete="name"
+                  aria-invalid={!!fieldErrors.name}
                   value={formData.name}
                   onChange={(e) => {
                     setFormData({ ...formData, name: e.target.value });
@@ -529,9 +548,12 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Email *</label>
+                <Label htmlFor="checkout-email" className="text-sm font-medium text-foreground">Email *</Label>
                 <Input
                   type="email"
+                  id="checkout-email"
+                  autoComplete="email"
+                  aria-invalid={!!fieldErrors.email}
                   value={formData.email}
                   onChange={(e) => {
                     setFormData({ ...formData, email: e.target.value });
@@ -544,8 +566,12 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Phone Number *</label>
+                <Label htmlFor="checkout-phone" className="text-sm font-medium text-foreground">Phone Number *</Label>
                 <Input
+                  id="checkout-phone"
+                  autoComplete="tel"
+                  aria-invalid={!!fieldErrors.phone}
+                  type="tel" inputMode="tel"
                   value={formData.phone}
                   onChange={(e) => {
                     setFormData({ ...formData, phone: e.target.value });
@@ -558,8 +584,11 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Delivery Address *</label>
+                <Label htmlFor="checkout-address" className="text-sm font-medium text-foreground">Delivery Address *</Label>
                 <Textarea
+                  id="checkout-address"
+                  autoComplete="street-address"
+                  aria-invalid={!!fieldErrors.address}
                   value={formData.address}
                   onChange={(e) => {
                     setFormData({ ...formData, address: e.target.value });
@@ -582,6 +611,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
                   setPaymentMethod(value as "cod" | "bkash" | "nagad");
                   setFieldErrors({});
                 }}
+                disabled={!!pendingOrder.current}
                 className="space-y-3"
               >
                 {/* Cash on Delivery */}
@@ -590,8 +620,8 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
                 }`}>
                   <RadioGroupItem value="cod" id="cod" />
                   <Label htmlFor="cod" className="flex items-center gap-3 cursor-pointer flex-1">
-                    <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                      <Banknote className="w-6 h-6 text-green-600" />
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Banknote className="w-6 h-6 text-primary" />
                     </div>
                     <span className="font-medium">Cash on Delivery</span>
                   </Label>
@@ -599,15 +629,15 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
 
                 {/* bKash */}
                 <div className={`flex items-center space-x-3 p-3 rounded-lg border transition-all ${
-                  paymentMethod === "bkash" ? "border-[#E2136E] bg-[#E2136E]/5" : "border-gold/20 hover:border-gold/40"
+                  paymentMethod === "bkash" ? "border-payment-bkash bg-payment-bkash/5" : "border-gold/20 hover:border-gold/40"
                 }`}>
                   <RadioGroupItem value="bkash" id="bkash" />
                   <Label htmlFor="bkash" className="flex items-center gap-3 cursor-pointer flex-1">
-                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#E2136E] flex items-center justify-center p-1">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-payment-bkash flex items-center justify-center p-1">
                       <img src={bkashLogo} alt="bKash" className="w-full h-full object-contain" />
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-medium text-[#E2136E]">bKash</span>
+                      <span className="font-medium text-payment-bkash">bKash</span>
                       <span className="text-xs text-muted-foreground">Mobile Banking</span>
                     </div>
                   </Label>
@@ -615,15 +645,15 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
 
                 {/* Nagad */}
                 <div className={`flex items-center space-x-3 p-3 rounded-lg border transition-all ${
-                  paymentMethod === "nagad" ? "border-[#F6921E] bg-[#F6921E]/5" : "border-gold/20 hover:border-gold/40"
+                  paymentMethod === "nagad" ? "border-payment-nagad bg-payment-nagad/5" : "border-gold/20 hover:border-gold/40"
                 }`}>
                   <RadioGroupItem value="nagad" id="nagad" />
                   <Label htmlFor="nagad" className="flex items-center gap-3 cursor-pointer flex-1">
-                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center p-1">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-payment-surface flex items-center justify-center p-1">
                       <img src={nagadLogo} alt="Nagad" className="w-full h-full object-contain" />
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-medium text-[#F6921E]">Nagad</span>
+                      <span className="font-medium text-payment-nagad">Nagad</span>
                       <span className="text-xs text-muted-foreground">Digital Banking</span>
                     </div>
                   </Label>
@@ -633,22 +663,22 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
               {/* Mobile Banking Instructions */}
               {(paymentMethod === "bkash" || paymentMethod === "nagad") && (
                 <div className={`p-4 rounded-lg border ${
-                  paymentMethod === "bkash" 
-                    ? "bg-[#E2136E]/5 border-[#E2136E]/20" 
-                    : "bg-[#F6921E]/5 border-[#F6921E]/20"
+                  paymentMethod === "bkash"
+                    ? "bg-payment-bkash/5 border-payment-bkash/20"
+                    : "bg-payment-nagad/5 border-payment-nagad/20"
                 }`}>
                   <div className="flex items-center gap-2 mb-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden p-1 ${
-                      paymentMethod === "bkash" ? "bg-[#E2136E]" : "bg-white"
+                      paymentMethod === "bkash" ? "bg-payment-bkash" : "bg-payment-surface"
                     }`}>
-                      <img 
-                        src={paymentMethod === "bkash" ? bkashLogo : nagadLogo} 
-                        alt={paymentMethod === "bkash" ? "bKash" : "Nagad"} 
-                        className="w-full h-full object-contain" 
+                      <img
+                        src={paymentMethod === "bkash" ? bkashLogo : nagadLogo}
+                        alt={paymentMethod === "bkash" ? "bKash" : "Nagad"}
+                        className="w-full h-full object-contain"
                       />
                     </div>
                     <span className={`font-semibold ${
-                      paymentMethod === "bkash" ? "text-[#E2136E]" : "text-[#F6921E]"
+                      paymentMethod === "bkash" ? "text-payment-bkash" : "text-payment-nagad"
                     }`}>
                       {paymentMethod === "bkash" ? "bKash" : "Nagad"} Payment
                     </span>
@@ -661,6 +691,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
                     </p>
                   )}
 
+                  {gatewayError && <div role="alert" className="mb-3 text-sm text-destructive">Could not check payment availability. <Button type="button" variant="outline" onClick={()=>setGatewayRetry(v=>v+1)}>Retry</Button></div>}
                   {gatewayAvailable && (
                     <div className="flex flex-col sm:flex-row gap-2 mb-4">
                       <Button
@@ -687,12 +718,12 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
                     </div>
                   )}
 
-                  {paymentFlow === "gateway" ? (
+                  {!checkingGateway && !gatewayError && gatewayAvailable !== null && (paymentFlow === "gateway" ? (
                     <p className="text-sm text-muted-foreground">
                       After you confirm the order, you'll be taken to the secure{" "}
                       {paymentMethod === "bkash" ? "bKash" : "Nagad"} page to pay{" "}
-                      <strong className={paymentMethod === "bkash" ? "text-[#E2136E]" : "text-[#F6921E]"}>
-                        ৳{totalPrice.toLocaleString()}
+                      <strong className={paymentMethod === "bkash" ? "text-payment-bkash" : "text-payment-nagad"}>
+                        ৳{payableTotal.toLocaleString()}
                       </strong>
                       . Your payment is confirmed automatically — no transaction ID needed.
                     </p>
@@ -701,16 +732,16 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
                       <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside mb-4">
                         <li>Open your {paymentMethod === "bkash" ? "bKash" : "Nagad"} app</li>
                         <li>Select <strong>"Send Money"</strong></li>
-                        <li>Send <strong className={paymentMethod === "bkash" ? "text-[#E2136E]" : "text-[#F6921E]"}>৳{totalPrice.toLocaleString()}</strong> to:</li>
+                        <li>Send <strong className={paymentMethod === "bkash" ? "text-payment-bkash" : "text-payment-nagad"}>৳{payableTotal.toLocaleString()}</strong> to:</li>
                       </ol>
 
                       <div className={`flex items-center gap-2 p-3 rounded-lg border ${
-                        paymentMethod === "bkash" 
-                          ? "bg-[#E2136E]/10 border-[#E2136E]/30" 
-                          : "bg-[#F6921E]/10 border-[#F6921E]/30"
+                        paymentMethod === "bkash"
+                          ? "bg-payment-bkash/10 border-payment-bkash/30"
+                          : "bg-payment-nagad/10 border-payment-nagad/30"
                       }`}>
                         <span className={`font-mono font-bold text-lg flex-1 ${
-                          paymentMethod === "bkash" ? "text-[#E2136E]" : "text-[#F6921E]"
+                          paymentMethod === "bkash" ? "text-payment-bkash" : "text-payment-nagad"
                         }`}>
                           {PAYMENT_NUMBER}
                         </span>
@@ -719,7 +750,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
                           variant="ghost"
                           size="sm"
                           onClick={() => copyToClipboard(PAYMENT_NUMBER)}
-                          className="h-8 px-3 hover:bg-background/50"
+                          className="h-11 px-3 hover:bg-background/50"
                         >
                           <Copy className="w-4 h-4 mr-1" />
                           Copy
@@ -727,24 +758,25 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
                       </div>
 
                       <div className="mt-4 space-y-1.5">
-                        <label className="text-sm font-medium text-foreground">Transaction ID *</label>
+                        <Label htmlFor="checkout-transaction" className="text-sm font-medium text-foreground">Transaction ID *</Label>
                         <Input
+                          id="checkout-transaction"
                           value={transactionId}
                           onChange={(e) => {
                             setTransactionId(e.target.value);
                             if (fieldErrors.transactionId) setFieldErrors({});
                           }}
                           className={`bg-background ${
-                            paymentMethod === "bkash" 
-                              ? "border-[#E2136E]/30 focus:border-[#E2136E]" 
-                              : "border-[#F6921E]/30 focus:border-[#F6921E]"
+                            paymentMethod === "bkash"
+                              ? "border-payment-bkash/30 focus:border-payment-bkash"
+                              : "border-payment-nagad/30 focus:border-payment-nagad"
                           } ${fieldErrors.transactionId ? "border-destructive" : ""}`}
                           placeholder="e.g., TXN123456789"
                         />
                         {fieldErrors.transactionId && <p className="text-xs text-destructive">{fieldErrors.transactionId}</p>}
                       </div>
                     </>
-                  )}
+                  ))}
                 </div>
               )}
             </div>
@@ -767,17 +799,17 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
                 <h3 className="font-semibold text-foreground">Payment Method</h3>
                 <div className="flex items-center gap-2">
                   {paymentMethod === "cod" ? (
-                    <Banknote className="w-5 h-5 text-green-600" />
+                    <Banknote className="w-5 h-5 text-primary" />
                   ) : (
-                    <img 
-                      src={paymentMethod === "bkash" ? bkashLogo : nagadLogo} 
+                    <img
+                      src={paymentMethod === "bkash" ? bkashLogo : nagadLogo}
                       alt={paymentMethodLabel}
                       className="w-6 h-6 object-contain"
                     />
                   )}
                   <span className={`font-medium ${
-                    paymentMethod === "bkash" ? "text-[#E2136E]" : 
-                    paymentMethod === "nagad" ? "text-[#F6921E]" : "text-green-600"
+                    paymentMethod === "bkash" ? "text-payment-bkash" :
+                    paymentMethod === "nagad" ? "text-payment-nagad" : "text-primary"
                   }`}>
                     {paymentMethodLabel}
                   </span>
@@ -803,14 +835,14 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
                 </div>
                 <div className="border-t border-border pt-2 flex justify-between font-semibold">
                   <span>Total</span>
-                  <span className="text-gold text-lg">৳{totalPrice.toLocaleString()}</span>
+                  <span className="text-gold text-lg">৳{payableTotal.toLocaleString()}</span>
                 </div>
               </div>
             </div>
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex gap-3 mt-6 pt-4 border-t border-gold/20">
+          <div className="sticky bottom-0 flex gap-3 mt-6 py-4 bg-card border-t border-gold/20">
             {currentStep > 0 && (
               <Button
                 type="button"
@@ -822,11 +854,12 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
                 Back
               </Button>
             )}
-            
+
             {currentStep < 2 ? (
               <Button
                 type="button"
                 onClick={handleNext}
+                disabled={quoting || !!quoteError || (currentStep === 1 && isMobileBanking && (checkingGateway || gatewayError || gatewayAvailable === null))}
                 className="flex-1 bg-gradient-to-r from-gold to-gold-light text-background hover:opacity-90"
               >
                 Next
@@ -836,7 +869,7 @@ export const CheckoutModal = ({ open, onOpenChange }: CheckoutModalProps) => {
               <Button
                 type="button"
                 onClick={handleSubmit}
-                disabled={isSubmitting}
+                disabled={isSubmitting || quoting || !!quoteError || (isMobileBanking && (checkingGateway || gatewayError || gatewayAvailable === null))}
                 className="flex-1 bg-gradient-to-r from-gold to-gold-light text-background hover:opacity-90"
               >
                 {isSubmitting ? (

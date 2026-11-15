@@ -38,5 +38,5 @@ const getLoader = (pathname: string): RouteLoader | undefined => {
 
 export const preloadRoute = (pathname: string) => {
   const loader = getLoader(pathname);
-  if (loader) void loader();
+  if (loader) void loader().catch(() => { /* Navigation renders its own retry boundary. */ });
 };

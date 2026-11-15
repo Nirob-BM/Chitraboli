@@ -198,7 +198,7 @@ export const AIAssistantPanel = ({ isOpen, onClose }: AIAssistantPanelProps) => 
         }
       }
     } catch (error) {
-      console.error("Chat error:", error);
+
       setMessages(prev => [...prev, {
         role: "assistant",
         content: language === "bn" 
@@ -277,14 +277,14 @@ export const AIAssistantPanel = ({ isOpen, onClose }: AIAssistantPanelProps) => 
                 toast.error(language === "bn" ? "কোনো কথা বোঝা যায়নি" : language === "hi" ? "कोई बात समझ नहीं आई" : "Could not understand speech");
               }
             } catch (error) {
-              console.error('Transcription error:', error);
+
               toast.error(language === "bn" ? "ভয়েস প্রসেস করতে সমস্যা" : language === "hi" ? "आवाज प्रोसेस करने में समस्या" : "Failed to process voice");
             } finally {
               setIsProcessingVoice(false);
             }
           };
         } catch (error) {
-          console.error('Audio processing error:', error);
+
           setIsProcessingVoice(false);
           toast.error("Failed to process audio");
         }
@@ -294,7 +294,7 @@ export const AIAssistantPanel = ({ isOpen, onClose }: AIAssistantPanelProps) => 
       setIsRecording(true);
       
     } catch (error) {
-      console.error('Microphone access error:', error);
+
       toast.error(language === "bn" ? "মাইক্রোফোন অ্যাক্সেস দিন" : language === "hi" ? "माइक्रोफोन एक्सेस दें" : "Please allow microphone access");
     }
   }, [language]);
@@ -459,7 +459,6 @@ export const AIAssistantPanel = ({ isOpen, onClose }: AIAssistantPanelProps) => 
 
       playFromUrl(audioUrl, false);
     } catch (error) {
-      console.error('TTS error:', error);
 
       // Last-resort fallback for any other error
       setIsSpeaking(true);

@@ -24,6 +24,7 @@ interface Product {
   description: string | null;
   featured: boolean;
   in_stock: boolean;
+  stock_quantity: number | null;
   colors: string[] | null;
   sizes: string[] | null;
 }
@@ -92,16 +93,14 @@ const ProductDetail = () => {
   }, [slug]);
 
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!product || product.stock_quantity === 0 || (product.stock_quantity !== null && quantity > product.stock_quantity)) return;
     
-    for (let i = 0; i < quantity; i++) {
-      addItem({
+    void addItem({
         product_id: product.id,
         product_name: product.name,
         product_price: product.price,
         product_image: product.image_url ?? "",
-      });
-    }
+      }, quantity);
     
     toast({
       title: "Added to Cart",
@@ -227,7 +226,7 @@ const ProductDetail = () => {
                     <Badge variant="secondary" className="uppercase tracking-wider">
                       {product.category}
                     </Badge>
-                    {product.in_stock ? (
+                    {product.in_stock && product.stock_quantity !== 0 ? (
                       <Badge variant="outline" className="text-green-600 border-green-600/30">
                         <Check className="h-3 w-3 mr-1" />
                         In Stock
@@ -324,6 +323,7 @@ const ProductDetail = () => {
                         variant="outline"
                         size="icon"
                         onClick={() => setQuantity(quantity + 1)}
+                        disabled={product.stock_quantity !== null && quantity >= product.stock_quantity}
                         aria-label="Increase quantity"
                       >
                         <Plus className="h-4 w-4" />
@@ -337,7 +337,7 @@ const ProductDetail = () => {
                     size="lg"
                     className="w-full text-lg py-6"
                     onClick={handleAddToCart}
-                    disabled={!product.in_stock}
+                    disabled={!product.in_stock || product.stock_quantity === 0 || (product.stock_quantity !== null && quantity > product.stock_quantity)}
                   >
                     <ShoppingCart className="mr-2 h-5 w-5" />
                     Add to Cart - ৳ {(product.price * quantity).toLocaleString()}

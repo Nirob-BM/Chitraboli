@@ -46,7 +46,7 @@ serve(async (req) => {
                      'unknown';
     
     if (isRateLimited(clientIp)) {
-      console.log(`Rate limit exceeded for IP: ${clientIp}`);
+
       return new Response(
         JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -67,8 +67,6 @@ serve(async (req) => {
     // Use a multilingual voice that supports Bengali, Hindi, and English
     // Sarah - EXAVITQu4vr4xnSDxMaL is a good multilingual voice
     const voiceId = 'EXAVITQu4vr4xnSDxMaL';
-
-    console.log(`Generating ElevenLabs TTS for language: ${language}, text length: ${text.length}`);
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
@@ -100,8 +98,6 @@ serve(async (req) => {
         // ignore
       }
 
-      console.error('ElevenLabs TTS error:', errJson ?? (await response.text()));
-
       const code = errJson?.detail?.status as string | undefined;
       const message = (errJson?.detail?.message || errJson?.message || 'Failed to generate speech') as string;
 
@@ -120,8 +116,6 @@ serve(async (req) => {
     // Return the audio directly as binary
     const audioBuffer = await response.arrayBuffer();
 
-    console.log('ElevenLabs TTS generated successfully, audio size:', audioBuffer.byteLength);
-
     return new Response(audioBuffer, {
       headers: {
         ...corsHeaders,
@@ -129,7 +123,7 @@ serve(async (req) => {
       },
     });
   } catch (error) {
-    console.error('TTS error:', error);
+
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       {

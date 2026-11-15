@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test": "bun test tests/commerce.test.ts",
     "predev": "bunx tsx scripts/generate-sitemap.ts",
     "dev": "vite",
     "prebuild": "bunx tsx scripts/generate-sitemap.ts",

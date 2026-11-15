@@ -167,6 +167,21 @@ export type Database = {
         }
         Relationships: []
       }
+      cart_merge_receipts: {
+        Row: {
+          merge_key: string
+          user_id: string
+        }
+        Insert: {
+          merge_key: string
+          user_id: string
+        }
+        Update: {
+          merge_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       collections: {
         Row: {
           created_at: string
@@ -520,6 +535,8 @@ export type Database = {
       orders: {
         Row: {
           assigned_rider_id: string | null
+          checkout_key: string | null
+          checkout_token_hash: string | null
           created_at: string
           customer_address: string
           customer_email: string
@@ -544,6 +561,8 @@ export type Database = {
         }
         Insert: {
           assigned_rider_id?: string | null
+          checkout_key?: string | null
+          checkout_token_hash?: string | null
           created_at?: string
           customer_address: string
           customer_email: string
@@ -568,6 +587,8 @@ export type Database = {
         }
         Update: {
           assigned_rider_id?: string | null
+          checkout_key?: string | null
+          checkout_token_hash?: string | null
           created_at?: string
           customer_address?: string
           customer_email?: string
@@ -1213,6 +1234,10 @@ export type Database = {
           _old_value?: string
         }
         Returns: string
+      }
+      merge_guest_cart: {
+        Args: { _items: Json; _merge_key: string }
+        Returns: undefined
       }
       slugify: { Args: { _text: string }; Returns: string }
       track_order: {

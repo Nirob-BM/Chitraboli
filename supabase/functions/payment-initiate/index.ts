@@ -34,13 +34,14 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      Deno.env.get("SUPABASE_URL") || "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
     );
 
     const body = await req.json().catch(() => ({}));
     const orderId = typeof body?.order_id === "string" ? body.order_id : "";
     const provider = body?.provider as Provider;
+    const checkoutToken = typeof body?.checkout_token === "string" ? body.checkout_token : "";
     const returnOrigin = typeof body?.return_origin === "string" ? body.return_origin : "";
 
     // Availability probe used by checkout to decide between automatic payment
@@ -57,28 +58,41 @@ serve(async (req) => {
     if (provider !== "bkash" && provider !== "nagad") {
       return json({ error: "provider must be bkash or nagad" }, 400);
     }
-    if (!/^https?:\/\/[^\s]+$/.test(returnOrigin)) {
+    if (body.action !== "status" && body.action !== "cod" && !/^https?:\/\/[^\s]+$/.test(returnOrigin)) {
       return json({ error: "A valid return_origin is required" }, 400);
     }
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
-      .select("id, total_amount, payment_status, customer_phone")
+      .select("id, order_number, total_amount, payment_status, customer_phone, checkout_token_hash, payment_method")
       .eq("id", orderId)
       .maybeSingle();
 
     if (orderError) {
-      console.error("Failed to load order:", orderError);
+
       return json({ error: "Failed to load order" }, 500);
     }
     if (!order) return json({ error: "Order not found" }, 404);
+    const tokenHash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(checkoutToken)))).map(b => b.toString(16).padStart(2,"0")).join("");
+    if (!checkoutToken || tokenHash !== order.checkout_token_hash) return json({error:"Order access denied"},403);
+    if(body.action === "status") {
+      const {data:tx,error}=await supabase.from("payment_transactions").select("status,environment,gateway_transaction_id,provider").eq("order_id",order.id).order("created_at",{ascending:false}).limit(1).maybeSingle();
+      if(error)return json({error:"Could not verify payment"},503);
+      return json({payment_status:order.payment_status,transaction_status:tx?.status,environment:tx?.environment,transaction_id:tx?.gateway_transaction_id,provider:tx?.provider,order_number:order.order_number,total_amount:order.total_amount});
+    }
+    if(body.action === "cod") {
+      if(order.payment_status !== "unpaid")return json({error:"This payment cannot be changed"},400);
+      const {error}=await supabase.from("orders").update({payment_method:"cod",payment_gateway:null,transaction_id:null}).eq("id",order.id).eq("payment_status","unpaid");
+      if(error)return json({error:"Could not update payment method"},503);
+      return json({success:true,order_number:order.order_number});
+    }
     if (order.payment_status === "verified") {
       return json({ error: "This order is already paid" }, 400);
     }
 
     const configured = provider === "bkash" ? getBkashConfig() : getNagadConfig();
     if (!configured) {
-      console.log(`${provider} credentials are not configured; manual fallback required`);
+
       return json({
         configured: false,
         provider,
@@ -87,6 +101,10 @@ serve(async (req) => {
       });
     }
 
+    const {data:active}=await supabase.from("payment_transactions").select("raw_response").eq("order_id",order.id).eq("provider",provider).eq("status","initiated").order("created_at",{ascending:false}).limit(1).maybeSingle();
+    const activeRaw=active?.raw_response as {bkashURL?:string;callBackUrl?:string}|null;
+    const activeUrl=activeRaw?.bkashURL||activeRaw?.callBackUrl;
+    if(activeUrl)return json({configured:true,redirect_url:activeUrl});
     const invoice = invoiceNumber();
     const amount = Number(order.total_amount).toFixed(2);
 
@@ -106,7 +124,7 @@ serve(async (req) => {
       .single();
 
     if (txError || !tx) {
-      console.error("Failed to create payment transaction:", txError);
+
       return json({ error: "Failed to start payment" }, 500);
     }
 
@@ -117,7 +135,8 @@ serve(async (req) => {
     let raw: unknown;
 
     if (provider === "bkash") {
-      const cfg = getBkashConfig()!;
+      const cfg = getBkashConfig();
+      if (!cfg) return json({error:"Payment unavailable"},503);
       const token = await bkashGrantToken(cfg);
       const res = await fetch(`${cfg.baseUrl}/tokenized/checkout/create`, {
         method: "POST",
@@ -135,7 +154,7 @@ serve(async (req) => {
       raw = await res.json().catch(() => ({}));
       const created = raw as { bkashURL?: string; paymentID?: string; statusMessage?: string };
       if (!res.ok || !created?.bkashURL || !created?.paymentID) {
-        console.error(`bKash create failed [${res.status}]:`, JSON.stringify(raw));
+
         await supabase.from("payment_transactions").update({
           status: "failed",
           failure_reason: created?.statusMessage || `bKash create failed (${res.status})`,
@@ -146,7 +165,8 @@ serve(async (req) => {
       redirectUrl = created.bkashURL;
       gatewayPaymentId = created.paymentID;
     } else {
-      const cfg = getNagadConfig()!;
+      const cfg = getNagadConfig();
+      if (!cfg) return json({error:"Payment unavailable"},503);
       const dateTime = nagadTimestamp();
       const privateKey = forge.pki.privateKeyFromPem(normalizePem(cfg.privateKey, "PRIVATE"));
       const publicKey = forge.pki.publicKeyFromPem(normalizePem(cfg.publicKey, "PUBLIC"));
@@ -166,6 +186,7 @@ serve(async (req) => {
         return forge.util.encode64(privateKey.sign(md));
       };
 
+      const initChallenge = crypto.randomUUID().replace(/-/g, "").slice(0,20);
       const initRes = await fetch(
         `${cfg.baseUrl}/check-out/initialize/${cfg.merchantId}/${invoice}`,
         {
@@ -183,14 +204,14 @@ serve(async (req) => {
               merchantId: cfg.merchantId,
               datetime: dateTime,
               orderId: invoice,
-              challenge: crypto.randomUUID().replace(/-/g, "").slice(0, 20),
+              challenge: initChallenge,
             }),
             signature: signRaw(
               JSON.stringify({
                 merchantId: cfg.merchantId,
                 datetime: dateTime,
                 orderId: invoice,
-                challenge: crypto.randomUUID().replace(/-/g, "").slice(0, 20),
+                challenge: initChallenge,
               }),
             ),
           }),
@@ -199,7 +220,7 @@ serve(async (req) => {
       const initBody = await initRes.json().catch(() => ({}));
       const challenge = (initBody as { sensitiveData?: string })?.sensitiveData;
       if (!initRes.ok || !challenge) {
-        console.error(`Nagad initialize failed [${initRes.status}]:`, JSON.stringify(initBody));
+
         await supabase.from("payment_transactions").update({
           status: "failed",
           failure_reason: `Nagad initialize failed (${initRes.status})`,
@@ -241,7 +262,7 @@ serve(async (req) => {
       raw = await completeRes.json().catch(() => ({}));
       const completed = raw as { callBackUrl?: string; status?: string; message?: string };
       if (!completeRes.ok || !completed?.callBackUrl) {
-        console.error(`Nagad complete failed [${completeRes.status}]:`, JSON.stringify(raw));
+
         await supabase.from("payment_transactions").update({
           status: "failed",
           failure_reason: completed?.message || `Nagad complete failed (${completeRes.status})`,
@@ -273,7 +294,7 @@ serve(async (req) => {
       redirect_url: redirectUrl,
     });
   } catch (error) {
-    console.error("Unexpected error in payment-initiate:", error);
+
     return json({ error: "An unexpected error occurred while starting the payment" }, 500);
   }
 });

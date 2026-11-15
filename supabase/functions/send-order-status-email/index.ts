@@ -94,7 +94,6 @@ const getPaymentMethodColor = (method: string): string => {
 };
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("Received request to send order status email");
 
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -104,15 +103,15 @@ const handler = async (req: Request): Promise<Response> => {
     // Verify admin authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error("No authorization header provided");
+
       return new Response(
         JSON.stringify({ success: false, error: "Unauthorized - No authorization header" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || "";
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || "";
     
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
@@ -121,7 +120,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Verify the user is authenticated
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
-      console.error("Authentication failed:", authError);
+
       return new Response(
         JSON.stringify({ success: false, error: "Unauthorized - Invalid token" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -137,18 +136,14 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (roleError || !roleData) {
-      console.error("Admin role check failed:", roleError);
+
       return new Response(
         JSON.stringify({ success: false, error: "Forbidden - Admin access required" }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    console.log("Admin access verified for user:", user.id);
-
     const { customerName, customerEmail, orderId, newStatus, items, totalAmount, paymentMethod, transactionId }: OrderStatusEmailRequest = await req.json();
-
-    console.log(`Sending status email to ${customerEmail} for order ${orderId}, status: ${newStatus}`);
 
     const { subject, message, emoji } = getStatusMessage(newStatus);
     const paymentLabel = getPaymentMethodLabel(paymentMethod || 'cod');
@@ -242,16 +237,14 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log("Email sent successfully:", emailResponse);
-
     return new Response(JSON.stringify({ success: true, data: emailResponse }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: any) {
-    console.error("Error sending order status email:", error);
+
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: "Could not send the status email" }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
