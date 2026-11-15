@@ -38,7 +38,6 @@ const Index = () => {
   return (
     <Layout>
       <SEO
-        title="Handmade with Love"
         description="Discover Chitraboli — handcrafted jewellery made with love in Bangladesh. Unique artisan rings, necklaces, earrings & bangles for every special moment."
       />
       {/* Hero Section */}

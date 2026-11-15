@@ -13,6 +13,7 @@ interface SEOProps {
 
 const SITE_ORIGIN = "https://chitraboli.lovable.app";
 const DEFAULT_TITLE = "Chitraboli — Handmade with Love | Handcrafted Jewellery Bangladesh";
+const DEFAULT_SOCIAL_TITLE = "Chitraboli — Handcrafted Jewellery from Bangladesh";
 const DEFAULT_DESCRIPTION =
   "Discover Chitraboli — handcrafted jewellery made with love in Bangladesh. Unique artisan rings, necklaces, earrings & bangles for every special moment.";
 const DEFAULT_IMAGE =
@@ -76,14 +77,15 @@ export const SEO = ({
     updateCanonical(resolvedUrl);
 
     // Open Graph
-    updateMetaTag("og:title", fullTitle, true);
+    const socialTitle = title ? fullTitle : DEFAULT_SOCIAL_TITLE;
+    updateMetaTag("og:title", socialTitle, true);
     updateMetaTag("og:description", description, true);
     updateMetaTag("og:image", image, true);
     updateMetaTag("og:url", resolvedUrl, true);
     updateMetaTag("og:type", type, true);
 
     // Twitter
-    updateMetaTag("twitter:title", fullTitle);
+    updateMetaTag("twitter:title", socialTitle);
     updateMetaTag("twitter:description", description);
     updateMetaTag("twitter:image", image);
 
