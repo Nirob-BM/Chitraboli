@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { X, Send, Bot, User, Loader2, Globe, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   role: "user" | "assistant";
@@ -128,6 +129,14 @@ export const AIAssistantPanel = ({ isOpen, onClose }: AIAssistantPanelProps) => 
   const sendMessage = async (messageText?: string) => {
     const textToSend = messageText || input.trim();
     if (!textToSend || isLoading) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      toast.error("Sign in to use the AI assistant.", {
+        action: { label: "Sign in", onClick: () => window.location.assign("/auth") },
+      });
+      return;
+    }
     
     const userMessage: Message = {
       role: "user",
@@ -143,7 +152,7 @@ export const AIAssistantPanel = ({ isOpen, onClose }: AIAssistantPanelProps) => 
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
+          Authorization: `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           language,
@@ -250,11 +259,18 @@ export const AIAssistantPanel = ({ isOpen, onClose }: AIAssistantPanelProps) => 
             const base64Audio = (reader.result as string).split(',')[1];
             
             try {
+              const { data: { session } } = await supabase.auth.getSession();
+              if (!session?.access_token) {
+                toast.error("Sign in to use voice input.", {
+                  action: { label: "Sign in", onClick: () => window.location.assign("/auth") },
+                });
+                return;
+              }
               const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/voice-to-text`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
+                  Authorization: `Bearer ${session.access_token}`
                 },
                 body: JSON.stringify({ audio: base64Audio, language })
               });
@@ -403,11 +419,17 @@ export const AIAssistantPanel = ({ isOpen, onClose }: AIAssistantPanelProps) => 
       setIsSpeaking(true);
       setSpeakingIndex(messageIndex);
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        speakWithBrowserTTS(text);
+        return;
+      }
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
+          Authorization: `Bearer ${session.access_token}`
         },
         body: JSON.stringify({ text, language })
       });

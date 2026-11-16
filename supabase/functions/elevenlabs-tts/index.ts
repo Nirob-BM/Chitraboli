@@ -1,9 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { getAuthenticatedUserId } from "../_shared/require-user.ts";
 
 // Rate limiting configuration
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -40,6 +37,13 @@ serve(async (req) => {
   }
 
   try {
+    if (!await getAuthenticatedUserId(req)) {
+      return new Response(JSON.stringify({ error: "Sign in to use text-to-speech." }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Rate limiting check
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
                      req.headers.get('x-real-ip') || 
@@ -54,14 +58,16 @@ serve(async (req) => {
     }
 
     const { text, language } = await req.json();
+    if (typeof text !== "string" || text.trim().length === 0 || text.length > 5000) {
+      return new Response(JSON.stringify({ error: "Text must contain 1 to 5000 characters." }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
 
     if (!ELEVENLABS_API_KEY) {
       throw new Error('ELEVENLABS_API_KEY is not configured');
-    }
-
-    if (!text || text.trim().length === 0) {
-      throw new Error('Text is required');
     }
 
     // Use a multilingual voice that supports Bengali, Hindi, and English
@@ -69,7 +75,7 @@ serve(async (req) => {
     const voiceId = 'EXAVITQu4vr4xnSDxMaL';
 
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
       {
         method: 'POST',
         headers: {
@@ -79,7 +85,6 @@ serve(async (req) => {
         body: JSON.stringify({
           text: text.substring(0, 5000), // ElevenLabs limit
           model_id: 'eleven_multilingual_v2',
-          output_format: 'mp3_44100_128',
           voice_settings: {
             stability: 0.5,
             similarity_boost: 0.75,

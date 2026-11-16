@@ -1,10 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { getAuthenticatedUserId } from "../_shared/require-user.ts";
 
 // Rate limiting configuration
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -71,6 +68,13 @@ serve(async (req) => {
   }
 
   try {
+    if (!await getAuthenticatedUserId(req)) {
+      return new Response(JSON.stringify({ error: "Sign in to use voice transcription." }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Rate limiting check
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
                      req.headers.get('x-real-ip') || 
@@ -85,9 +89,11 @@ serve(async (req) => {
     }
 
     const { audio, language } = await req.json();
-    
-    if (!audio) {
-      throw new Error('No audio data provided');
+    if (typeof audio !== "string" || audio.length === 0 || audio.length > 10_000_000) {
+      return new Response(JSON.stringify({ error: "Audio must be provided and under 7.5 MB." }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
@@ -115,7 +121,7 @@ serve(async (req) => {
       'hi': 'hi',  // Hindi
     };
     
-    if (language && languageMap[language]) {
+    if (typeof language === "string" && languageMap[language]) {
       formData.append('language', languageMap[language]);
     }
 

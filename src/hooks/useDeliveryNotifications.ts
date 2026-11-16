@@ -45,9 +45,10 @@ export const useDeliveryNotifications = () => {
         // Send SMS via edge function
         const { error } = await supabase.functions.invoke("send-order-sms", {
           body: {
-            phone: customerPhone,
-            message,
-            type: "delivery_nearby",
+            orderId,
+            riderName,
+            notificationType: "delivery_nearby",
+            etaMinutes,
           },
         });
 
@@ -90,9 +91,9 @@ export const useDeliveryNotifications = () => {
 
         const { error } = await supabase.functions.invoke("send-order-sms", {
           body: {
-            phone: customerPhone,
-            message,
-            type: "delivery_arrived",
+            orderId,
+            riderName,
+            notificationType: "delivery_arrived",
           },
         });
 

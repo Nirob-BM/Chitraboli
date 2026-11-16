@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildDeliverySms, type DeliveryNotificationType } from "../_shared/security-rules.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,11 +8,10 @@ const corsHeaders = {
 };
 
 interface SMSRequest {
-  to: string;
   orderId: string;
-  customerName: string;
-  totalAmount: number;
-  paymentMethod: string;
+  notificationType: DeliveryNotificationType;
+  riderName: string;
+  etaMinutes?: number;
 }
 
 // Rate limiting: 10 requests per minute per IP
@@ -79,6 +79,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Create Supabase client with user's auth token
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
@@ -100,6 +101,7 @@ const handler = async (req: Request): Promise<Response> => {
       .select("role")
       .eq("user_id", user.id)
       .in("role", ["admin", "super_admin", "order_manager"])
+      .limit(1)
       .maybeSingle();
 
     if (roleError || !roleData) {
@@ -110,31 +112,34 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-    const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-    const twilioPhoneNumber = Deno.env.get("TWILIO_PHONE_NUMBER");
-
-    if (!accountSid || !authToken || !twilioPhoneNumber) {
-
+    const body = await req.json() as Partial<SMSRequest>;
+    const { orderId, notificationType, riderName, etaMinutes } = body;
+    if (typeof orderId !== "string" || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(orderId) ||
+        typeof riderName !== "string" || riderName.trim().length < 1 || riderName.length > 80 ||
+        (notificationType !== "delivery_nearby" && notificationType !== "delivery_arrived")) {
       return new Response(
-        JSON.stringify({ error: "SMS service not configured" }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    const { to, orderId, customerName, totalAmount, paymentMethod }: SMSRequest = await req.json();
-
-    if (!to || !orderId) {
-      return new Response(
-        JSON.stringify({ error: "Phone number and order ID are required" }),
+        JSON.stringify({ error: "A valid order, delivery update, and rider name are required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Validate order exists in database
-    const { data: orderData, error: orderError } = await supabaseClient
+    if (notificationType === "delivery_nearby" && (typeof etaMinutes !== "number" || !Number.isInteger(etaMinutes))) {
+      return new Response(JSON.stringify({ error: "A valid delivery ETA is required" }), {
+        status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    if (!serviceRoleKey) {
+      return new Response(JSON.stringify({ error: "SMS service is temporarily unavailable" }), {
+        status: 503, headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Read trusted recipient and message data after verifying the caller's role.
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    const { data: orderData, error: orderError } = await adminClient
       .from("orders")
-      .select("id")
+      .select("id, order_number, customer_name, customer_phone")
       .eq("id", orderId)
       .maybeSingle();
 
@@ -146,25 +151,34 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Format phone number for Bangladesh (add +880 if not present)
-    let formattedPhone = to.replace(/\D/g, '');
-    if (formattedPhone.startsWith('0')) {
-      formattedPhone = '880' + formattedPhone.substring(1);
+    const deliverySms = buildDeliverySms(
+      orderData,
+      notificationType,
+      riderName,
+      etaMinutes,
+    );
+    if (!deliverySms) {
+      return new Response(JSON.stringify({ error: "The order does not have a valid Bangladesh delivery phone number" }), {
+        status: 400, headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
-    if (!formattedPhone.startsWith('880')) {
-      formattedPhone = '880' + formattedPhone;
-    }
-    formattedPhone = '+' + formattedPhone;
 
-    const message = `প্রিয় ${customerName}, আপনার অর্ডার #${orderId.slice(-8).toUpperCase()} সফলভাবে নিশ্চিত হয়েছে। মোট: ৳${totalAmount.toLocaleString()}। পেমেন্ট: ${paymentMethod}। ধন্যবাদ! - Jewelry Store`;
+    const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
+    const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
+    const twilioPhoneNumber = Deno.env.get("TWILIO_PHONE_NUMBER");
+    if (!accountSid || !authToken || !twilioPhoneNumber) {
+      return new Response(JSON.stringify({ error: "SMS service not configured" }), {
+        status: 500, headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
 
     // Twilio API call
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
     
     const formData = new URLSearchParams();
-    formData.append("To", formattedPhone);
+    formData.append("To", deliverySms.recipient);
     formData.append("From", twilioPhoneNumber);
-    formData.append("Body", message);
+    formData.append("Body", deliverySms.message);
 
     const response = await fetch(twilioUrl, {
       method: "POST",

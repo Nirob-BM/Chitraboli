@@ -1,10 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { getAuthenticatedUserId } from "../_shared/require-user.ts";
+import { sanitizeChatMessages } from "../_shared/security-rules.ts";
 
 // Rate limiting configuration
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -41,6 +39,13 @@ serve(async (req) => {
   }
 
   try {
+    if (!await getAuthenticatedUserId(req)) {
+      return new Response(JSON.stringify({ error: "Sign in to use the AI assistant." }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Rate limiting check
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
                      req.headers.get('x-real-ip') || 
@@ -54,7 +59,17 @@ serve(async (req) => {
       );
     }
 
-    const { messages, language = "bn" } = await req.json();
+    const body = await req.json();
+    const messages = sanitizeChatMessages(body?.messages);
+    const language = body?.language === "en" || body?.language === "hi" || body?.language === "bn"
+      ? body.language
+      : "bn";
+    if (!messages) {
+      return new Response(JSON.stringify({ error: "Provide up to 20 valid user and assistant messages, ending with a user message." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
