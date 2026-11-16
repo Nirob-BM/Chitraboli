@@ -11,3 +11,4 @@
 - Order status changes only move forward, enforced by a database trigger and mirrored in `src/lib/commerce.ts`; keep both in sync so the admin UI never offers a move the database rejects.
 - Customer data erasure goes through the admin-only `admin_erase_customer_data` function, which anonymizes orders instead of deleting them so sales records stay intact.
 - The admin section lives in the `?tab=` URL parameter so refreshes and shared links keep the open section.
+- Paid AI Edge Functions verify sessions through `supabase/functions/_shared/require-user.ts`, and chat roles and order-based SMS content are validated in shared security rules; this keeps paid calls and outbound messages tied to trusted identities and records.

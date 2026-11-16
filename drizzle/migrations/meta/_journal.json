@@ -29,6 +29,13 @@
       "when": 1794767173633,
       "tag": "0003_admin_customer_erasure_and_status_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794855511098,
+      "tag": "0004_restrict_public_media_and_review_access",
+      "breakpoints": true
     }
   ]
 }

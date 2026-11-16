@@ -17,3 +17,9 @@
 - [x] Product form: sizes/colors/stock/SKU, photo handling, upload failures, refresh, validation, errors (3–12, 27).
 - [x] Orders/customers/charts: load errors, paging, paid-only sales, forward-only statuses, per-order spinners, verified success (13–20, 30).
 - [x] Menu, phones and access: collapsed menu, phone slide-over, retry on access check, section in address, unsaved warning, labels, keyboard cards (21–26, 28–29).
+
+# Selected security scan findings
+- [ ] Protect paid AI endpoints with verified user sessions and restrict caller-supplied chat roles.
+- [ ] Bind delivery SMS to the customer phone saved on its order and approved notification types.
+- [ ] Restrict media-library records to administrators and expose only approved public review fields.
+- [ ] Test the security rules, deploy changed functions, and verify the scan findings.
