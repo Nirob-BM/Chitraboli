@@ -820,6 +820,7 @@ export type Database = {
           created_at: string
           id: string
           images: string[] | null
+          is_public: boolean
           product_id: string | null
           rating: number
           review_text: string
@@ -830,6 +831,7 @@ export type Database = {
           created_at?: string
           id?: string
           images?: string[] | null
+          is_public?: boolean
           product_id?: string | null
           rating: number
           review_text: string
@@ -840,6 +842,7 @@ export type Database = {
           created_at?: string
           id?: string
           images?: string[] | null
+          is_public?: boolean
           product_id?: string | null
           rating?: number
           review_text?: string
@@ -1206,7 +1209,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_reviews: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          images: string[] | null
+          product_id: string | null
+          rating: number | null
+          review_text: string | null
+          reviewer_name: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          images?: string[] | null
+          product_id?: string | null
+          rating?: number | null
+          review_text?: string | null
+          reviewer_name?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          images?: string[] | null
+          product_id?: string | null
+          rating?: number | null
+          review_text?: string | null
+          reviewer_name?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_erase_customer_data: {

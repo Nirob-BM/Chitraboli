@@ -20,6 +20,10 @@ export function sanitizeChatMessages(value: unknown): ChatMessage[] | null {
   return messages[messages.length - 1]?.role === "user" ? messages : null;
 }
 
+export function getLimitedHistory(messages: ChatMessage[]): ChatMessage[] {
+  return messages.slice(-10);
+}
+
 export type DeliveryNotificationType = "delivery_nearby" | "delivery_arrived";
 
 export interface DeliveryOrderForSms {

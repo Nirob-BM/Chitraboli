@@ -36,6 +36,20 @@
       "when": 1794855511098,
       "tag": "0004_restrict_public_media_and_review_access",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794930125205,
+      "tag": "0005_limit_public_review_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794930206690,
+      "tag": "0006_separate_public_reviews_from_admin_records",
+      "breakpoints": true
     }
   ]
 }

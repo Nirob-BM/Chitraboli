@@ -25,7 +25,7 @@ export const ReviewsSection = () => {
 
   const loadReviews = async () => {
     const { data, error } = await supabase
-      .from("reviews")
+      .from("public_reviews")
       .select("id, reviewer_name, rating, review_text, images, created_at")
       .order("created_at", { ascending: false });
 

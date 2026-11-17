@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { getAuthenticatedUserId } from "../_shared/require-user.ts";
-import { sanitizeChatMessages } from "../_shared/security-rules.ts";
+import { getLimitedHistory, sanitizeChatMessages } from "../_shared/security-rules.ts";
 
 // Rate limiting configuration
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -207,7 +207,7 @@ Your responses may be read aloud by TTS engines. Follow these rules:
 - If asked about specific orders, ask for their order ID.
 - Our jewelry is handmade with love and crafted with passion in Bangladesh.`
           },
-          ...messages,
+          ...getLimitedHistory(messages),
         ],
         stream: true,
       }),
