@@ -9,6 +9,10 @@ import {
   getBkashConfig,
   getNagadConfig,
 } from "../_shared/payments.ts";
+import {
+  DEFAULT_PAYMENT_RETURN_ORIGIN,
+  normalizePaymentReturnOrigin,
+} from "../_shared/security-rules.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,7 +20,8 @@ const corsHeaders = {
 };
 
 function redirect(base: string, params: Record<string, string>) {
-  const url = new URL(`${base.replace(/\/$/, "")}/payment/return`);
+  const safeOrigin = normalizePaymentReturnOrigin(base) ?? DEFAULT_PAYMENT_RETURN_ORIGIN;
+  const url = new URL(`${safeOrigin}/payment/return`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   return new Response(null, { status: 302, headers: { ...corsHeaders, Location: url.toString() } });
 }
@@ -47,7 +52,7 @@ serve(async (req) => {
     if (!tx) {
       return new Response("Payment not found", { status: 404, headers: corsHeaders });
     }
-    fallbackOrigin = tx.return_url || "";
+    fallbackOrigin = normalizePaymentReturnOrigin(tx.return_url) ?? DEFAULT_PAYMENT_RETURN_ORIGIN;
 
     // Already settled — just bounce the customer to the result page.
     if (tx.status === "succeeded") {

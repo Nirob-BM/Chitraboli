@@ -156,7 +156,7 @@ export const AIAssistantPanel = ({ isOpen, onClose }: AIAssistantPanelProps) => 
         },
         body: JSON.stringify({
           language,
-          messages: [...messages, userMessage].map(m => ({
+          messages: [...messages, userMessage].filter(m => m.role === "user").map(m => ({
             role: m.role,
             content: m.content
           }))

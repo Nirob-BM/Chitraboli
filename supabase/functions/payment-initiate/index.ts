@@ -17,6 +17,7 @@ import {
   nagadTimestamp,
   normalizePem,
 } from "../_shared/payments.ts";
+import { normalizePaymentReturnOrigin } from "../_shared/security-rules.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,7 +43,7 @@ serve(async (req) => {
     const orderId = typeof body?.order_id === "string" ? body.order_id : "";
     const provider = body?.provider as Provider;
     const checkoutToken = typeof body?.checkout_token === "string" ? body.checkout_token : "";
-    const returnOrigin = typeof body?.return_origin === "string" ? body.return_origin : "";
+    const requestedReturnOrigin = typeof body?.return_origin === "string" ? body.return_origin : "";
 
     // Availability probe used by checkout to decide between automatic payment
     // and the manual "send money + paste transaction ID" fallback.
@@ -58,8 +59,11 @@ serve(async (req) => {
     if (provider !== "bkash" && provider !== "nagad") {
       return json({ error: "provider must be bkash or nagad" }, 400);
     }
-    if (body.action !== "status" && body.action !== "cod" && !/^https?:\/\/[^\s]+$/.test(returnOrigin)) {
-      return json({ error: "A valid return_origin is required" }, 400);
+    const returnOrigin = body.action === "status" || body.action === "cod"
+      ? null
+      : normalizePaymentReturnOrigin(requestedReturnOrigin);
+    if (body.action !== "status" && body.action !== "cod" && !returnOrigin) {
+      return json({ error: "A trusted storefront return_origin is required" }, 400);
     }
 
     const { data: order, error: orderError } = await supabase
@@ -118,7 +122,7 @@ serve(async (req) => {
         status: "created",
         invoice_number: invoice,
         payer_reference: order.customer_phone,
-        return_url: returnOrigin.replace(/\/$/, ""),
+        return_url: returnOrigin,
       })
       .select("id")
       .single();

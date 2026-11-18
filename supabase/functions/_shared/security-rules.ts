@@ -14,14 +14,39 @@ export function sanitizeChatMessages(value: unknown): ChatMessage[] | null {
     if (typeof message.content !== "string") return null;
     const content = message.content.trim();
     if (!content || content.length > 4000) return null;
-    messages.push({ role: message.role, content });
+    // Conversation history is supplied by the browser, so assistant turns
+    // cannot be trusted as model-authored context. Keep user turns only.
+    if (message.role === "user") messages.push({ role: "user", content });
   }
 
-  return messages[messages.length - 1]?.role === "user" ? messages : null;
+  return messages.length ? messages : null;
 }
 
 export function getLimitedHistory(messages: ChatMessage[]): ChatMessage[] {
   return messages.slice(-10);
+}
+
+const TRUSTED_PAYMENT_RETURN_ORIGINS = new Set([
+  "https://chitraboli.lovable.app",
+  "https://id-preview--9a383f15-b4c0-4cb7-aecf-6a5732e8222f.lovable.app",
+]);
+
+export const DEFAULT_PAYMENT_RETURN_ORIGIN = "https://chitraboli.lovable.app";
+
+/** Accept only the storefront's exact HTTPS origins, never caller-chosen sites. */
+export function normalizePaymentReturnOrigin(value: unknown): string | null {
+  if (typeof value !== "string" || value.length > 512) return null;
+
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password) return null;
+    if (url.pathname !== "/" || url.search || url.hash) return null;
+    if (!TRUSTED_PAYMENT_RETURN_ORIGINS.has(url.origin)) return null;
+    if (value !== url.origin && value !== `${url.origin}/`) return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
 }
 
 export type DeliveryNotificationType = "delivery_nearby" | "delivery_arrived";
